@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="586" height="940" viewBox="0 0 586 940">
-<rect width="586" height="940" fill="#0c0c0c" rx="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="586" height="1192" viewBox="0 0 586 1192">
+<rect width="586" height="1192" fill="#0c0c0c" rx="8"/>
 <rect x="0" y="0" width="586" height="36" fill="#1a1a1a" rx="8"/>
 <rect x="0" y="28" width="586" height="8" fill="#1a1a1a"/>
 <circle cx="20" cy="18.0" r="5" fill="#ff5f56"/>
@@ -15,43 +15,58 @@
 <text x="20.0" y="196" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
 <text x="20.0" y="214" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  Test Suite (9 tests)</text>
 <text x="20.0" y="232" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
-<text x="20.0" y="268" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [1] #1:                       </text>
+<text x="20.0" y="268" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [1] interaction               </text>
 <text x="269.6" y="268" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="286" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [2] #2:                       </text>
+<text x="20.0" y="286" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [2] election                  </text>
 <text x="269.6" y="286" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="304" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [3] #3:                       </text>
+<text x="20.0" y="304" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [3] log_replication           </text>
 <text x="269.6" y="304" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="322" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [4] #4:                       </text>
-<text x="269.6" y="322" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="340" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [5] #5:                       </text>
-<text x="269.6" y="340" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="358" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [6] #6:                       </text>
+<text x="20.0" y="322" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [4] kv_apply                 </text>
+<text x="261.8" y="322" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
+<text x="20.0" y="340" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [5] wal_crash_recovery       </text>
+<text x="261.8" y="340" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
+<text x="20.0" y="358" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [6] property                  </text>
 <text x="269.6" y="358" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="376" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [7] #7:                       </text>
-<text x="269.6" y="376" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="394" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [8] #8:                       </text>
-<text x="269.6" y="394" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
-<text x="20.0" y="412" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [9] #9:                       </text>
-<text x="269.6" y="412" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
+<text x="20.0" y="376" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [7] stress                   </text>
+<text x="261.8" y="376" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
+<text x="20.0" y="394" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [8] partition                </text>
+<text x="261.8" y="394" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
+<text x="20.0" y="412" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#e2e8f0">  [9] benchmark                </text>
+<text x="261.8" y="412" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">PASSED</text>
 <text x="20.0" y="448" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">  Result: ALL 9 TESTS PASSED</text>
 <text x="20.0" y="484" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
 <text x="20.0" y="502" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  Latency Benchmark (1000 proposals, in-process)</text>
 <text x="20.0" y="520" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
-<text x="20.0" y="556" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Average:    35.0771 us</text>
-<text x="20.0" y="574" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p50 (median): 34 us</text>
-<text x="20.0" y="592" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p90:         43.7 us</text>
-<text x="20.0" y="610" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99:         61.9 us</text>
-<text x="20.0" y="628" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       91.9 us</text>
-<text x="20.0" y="646" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       91.9 us</text>
-<text x="20.0" y="664" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Throughput:  28508 ops/sec</text>
-<text x="20.0" y="700" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  (In-process baseline. Production latency = fsync + network RTT)</text>
-<text x="20.0" y="736" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
-<text x="20.0" y="754" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  Live Demo - 3-Node Cluster</text>
-<text x="20.0" y="772" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
-<text x="20.0" y="808" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f87171">  ERROR: No leader elected</text>
-<text x="20.0" y="826" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#facc15">  Crash recovery: proven by test_wal_crash_recovery (test #5)</text>
-<text x="20.0" y="844" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  WAL writes are fsync&#x27;d - data survives crash + restart</text>
-<text x="20.0" y="880" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
-<text x="20.0" y="898" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  RaftKVStore - https://github.com/YashrajOmar/NexusLOB</text>
-<text x="20.0" y="916" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
+<text x="20.0" y="556" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Average:     34.882 us</text>
+<text x="20.0" y="574" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p50 (median): 33.6 us</text>
+<text x="20.0" y="592" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p90:         36.3 us</text>
+<text x="20.0" y="610" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99:         63.5 us</text>
+<text x="20.0" y="628" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       116.2 us</text>
+<text x="20.0" y="646" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Throughput:  28668 ops/sec</text>
+<text x="20.0" y="682" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  (In-process baseline. Production latency = fsync + network RTT)</text>
+<text x="20.0" y="718" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
+<text x="20.0" y="736" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  Live Demo - 3-Node Cluster</text>
+<text x="20.0" y="754" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
+<text x="20.0" y="790" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  Starting 3-node cluster on localhost...</text>
+<text x="20.0" y="808" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  Waiting for election...</text>
+<text x="20.0" y="826" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">  Cluster elected leader: Node 1 (port 7001)</text>
+<text x="20.0" y="862" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#facc15">  Client commands:</text>
+<text x="20.0" y="898" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  &gt; SET user:42 alice      </text>
+<text x="230.6" y="898" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">-&gt; OK</text>
+<text x="20.0" y="916" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  &gt; GET user:42            </text>
+<text x="230.6" y="916" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">-&gt; OK alice</text>
+<text x="20.0" y="934" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  &gt; SET counter 0          </text>
+<text x="230.6" y="934" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">-&gt; OK</text>
+<text x="20.0" y="952" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  &gt; DEL user:42            </text>
+<text x="230.6" y="952" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">-&gt; OK alice</text>
+<text x="20.0" y="970" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  &gt; GET user:42            </text>
+<text x="230.6" y="970" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#4ade80">-&gt; OK</text>
+<text x="20.0" y="1006" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#facc15">  Follower redirect:</text>
+<text x="20.0" y="1024" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#facc15">  &gt; GET counter (follower) -&gt; NOTLEADER 1</text>
+<text x="20.0" y="1042" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  (follower redirects client to the leader)</text>
+<text x="20.0" y="1078" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#facc15">  Crash recovery: proven by test_wal_crash_recovery (test #5)</text>
+<text x="20.0" y="1096" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  WAL writes are fsync&#x27;d - data survives crash + restart</text>
+<text x="20.0" y="1132" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
+<text x="20.0" y="1150" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  RaftKVStore - https://github.com/YashrajOmar/NexusLOB</text>
+<text x="20.0" y="1168" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
 </svg>
