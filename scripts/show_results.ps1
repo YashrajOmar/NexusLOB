@@ -163,7 +163,7 @@ Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
 
 Write-Host ""
-Write-Host ("=" * 70) -ForegroundColor $CYAN
+Write-Host "======================================================================" -ForegroundColor $CYAN
 Write-Host "  RaftKVStore - https://github.com/YashrajOmar/NexusLOB" -ForegroundColor $CYAN
-Write-Host ("=" * 70) -ForegroundColor $CYAN
+Write-Host "======================================================================" -ForegroundColor $CYAN
 Write-Host ""
