@@ -1,0 +1,35 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260902000003
+Username: YRJ-VIVOBOOK\yashr
+RunAs User: YRJ-VIVOBOOK\yashr
+Configuration Name: 
+Machine: YRJ-VIVOBOOK (Microsoft Windows NT 10.0.26340.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File .\scripts\show_results.ps1
+Process ID: 13608
+PSVersion: 5.1.26100.9233
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9233
+BuildVersion: 10.0.26100.9233
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+
+========================================================================
+  RaftKVStore
+  Fault-tolerant replicated KV store with Raft consensus in C++17
+========================================================================
+
+  Building project...
+  Build: OK
+
+========================================================================
+  TEST SUITE - 9 tests
+========================================================================
+
+**********************
+Windows PowerShell transcript end
+End time: 20260902000004
+**********************

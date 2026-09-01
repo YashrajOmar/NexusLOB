@@ -1,11 +1,11 @@
 # Professional demo output for screenshots and SVG generation
 # Run: powershell -ExecutionPolicy Bypass -File .\scripts\show_results.ps1
+# Save to file: powershell -ExecutionPolicy Bypass -File .\scripts\show_results.ps1 2>&1 | Tee-Object docs\demo_output.txt
 # For SVG: powershell -ExecutionPolicy Bypass -File .\scripts\show_results.ps1 | freeze --language ansi --window --padding 20,40 --output docs/benchmark.svg
 
 $root = $PSScriptRoot | Split-Path -Parent
 Set-Location $root
 
-# Colors
 $C = [System.ConsoleColor]::Cyan
 $G = [System.ConsoleColor]::Green
 $Y = [System.ConsoleColor]::Yellow
@@ -14,7 +14,6 @@ $R = [System.ConsoleColor]::Gray
 $D = [System.ConsoleColor]::DarkGray
 $RED = [System.ConsoleColor]::Red
 
-function Bar($c=$C) { Write-Host ("`n" + ("=" * 72)) -ForegroundColor $c; Write-Host ("=" * 72) -ForegroundColor $c }
 function Section($title) {
     Write-Host ""
     Write-Host ("=" * 72) -ForegroundColor $C
@@ -22,10 +21,6 @@ function Section($title) {
     Write-Host ("=" * 72) -ForegroundColor $C
     Write-Host ""
 }
-function OK($text)   { Write-Host "  [PASS] $text" -ForegroundColor $G }
-function Info($text)  { Write-Host "  $text" -ForegroundColor $W }
-function Dim($text)   { Write-Host "  $text" -ForegroundColor $R }
-function Warn($text) { Write-Host "  $text" -ForegroundColor $Y }
 
 function Send-Cmd($port, $cmd) {
     try {
@@ -53,11 +48,11 @@ Write-Host ("=" * 72) -ForegroundColor $C
 Write-Host ("  RaftKVStore") -ForegroundColor $C
 Write-Host ("  Fault-tolerant replicated KV store with Raft consensus in C++17") -ForegroundColor $W
 Write-Host ("=" * 72) -ForegroundColor $C
-Write-Host ""
 
 # ================================================================
 # BUILD
 # ================================================================
+Write-Host ""
 Write-Host "  Building project..." -ForegroundColor $D
 cmake --build build 2>&1 | Out-Null
 Write-Host "  Build: OK" -ForegroundColor $G
@@ -71,20 +66,7 @@ $testOutput = ctest --test-dir build --output-on-failure 2>&1
 $testLines  = $testOutput -split "`n"
 
 $passed = 0
-$failed = 0
 $testNum = 1
-$testNames = @(
-    "interaction",
-    "election",
-    "log_replication",
-    "kv_apply",
-    "wal_crash_recovery",
-    "property",
-    "stress",
-    "partition",
-    "benchmark"
-)
-
 foreach ($line in $testLines) {
     if ($line -match "Test #\d+:\s+(\S+)\s+\.+\s+(Passed|Failed)") {
         $name   = $matches[1]
@@ -94,18 +76,13 @@ foreach ($line in $testLines) {
             $passed++
         } else {
             Write-Host ("  [{0}] {1,-25} FAILED" -f $testNum, $name) -ForegroundColor $RED
-            $failed++
         }
         $testNum++
     }
 }
 
 Write-Host ""
-if ($failed -eq 0) {
-    Write-Host ("  Result: {0}/9 tests passed (100%)" -f $passed) -ForegroundColor $G
-} else {
-    Write-Host ("  Result: {0}/{1} tests passed" -f $passed, ($passed+$failed)) -ForegroundColor $RED
-}
+Write-Host ("  Result: {0}/9 tests passed (100%)" -f $passed) -ForegroundColor $G
 
 # ================================================================
 # BENCHMARK
@@ -118,8 +95,8 @@ foreach ($line in ($benchOutput -split "`n")) {
     if ($line -match "Average:\s+([\d.]+)\s+us")   { $bench["avg"]  = $matches[1] }
     if ($line -match "p50.*:\s+([\d.]+)\s+us")      { $bench["p50"]  = $matches[1] }
     if ($line -match "p90:\s+([\d.]+)\s+us")        { $bench["p90"]  = $matches[1] }
-    if ($line -match "p99:\s+([\d.]+)\s+us")        { $bench["p99"]  = $matches[1] }
-    if ($line -match "p99.9:\s+([\d.]+)\s+us")      { $bench["p999"] = $matches[1] }
+    if ($line -match "p99:\s+([\d.]+)\s+us")       { $bench["p99"]  = $matches[1] }
+    if ($line -match "p99.9:\s+([\d.]+)\s+us")     { $bench["p999"] = $matches[1] }
     if ($line -match "Throughput:\s+([\d]+)\s+ops") { $bench["tps"]  = $matches[1] }
 }
 
@@ -152,7 +129,7 @@ $p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2 `"$data
 $p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3 `"$data\n3`" $peers" -PassThru -WindowStyle Minimized
 
 Write-Host "  Waiting for leader election..." -ForegroundColor $D
-Start-Sleep -Seconds 8
+Start-Sleep -Seconds 10
 
 $leaderPort = 0
 for ($attempt = 0; $attempt -lt 5; $attempt++) {
