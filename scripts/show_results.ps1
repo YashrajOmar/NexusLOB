@@ -93,9 +93,9 @@ Get-Process raftkvstore -ErrorAction SilentlyContinue | Stop-Process -Force
 if (Test-Path $data) { Remove-Item -Recurse -Force $data }
 New-Item -ItemType Directory -Path "$data\n1","$data\n2","$data\n3" -Force | Out-Null
 
-$p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1","$data\n1",$peers -PassThru -WindowStyle Hidden
-$p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2","$data\n2",$peers -PassThru -WindowStyle Hidden
-$p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data\n3",$peers -PassThru -WindowStyle Hidden
+$p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1 `"$data\n1`" $peers" -PassThru -WindowStyle Minimized
+$p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2 `"$data\n2`" $peers" -PassThru -WindowStyle Minimized
+$p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3 `"$data\n3`" $peers" -PassThru -WindowStyle Minimized
 
 Write-Host "  Waiting for election..." -ForegroundColor $GRAY
 Start-Sleep -Seconds 8
