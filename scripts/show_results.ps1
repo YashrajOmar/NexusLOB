@@ -169,13 +169,9 @@ $p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data
 Start-Sleep -Seconds 15
 
 $restartLeader = 0
-for ($attempt = 0; $attempt -lt 10; $attempt++) {
-    foreach ($port in 6001,6002,6003) {
-        $resp = Send-Cmd $port "SET probe3 1"
-        if ($resp -eq "OK") { $restartLeader = $port; break }
-    }
-    if ($restartLeader -gt 0) { break }
-    Start-Sleep -Seconds 3
+foreach ($port in 6001,6002,6003) {
+    $resp = Send-Cmd $port "SET probe3 1"
+    if ($resp -eq "OK") { $restartLeader = $port; break }
 }
 
 if ($restartLeader -gt 0) {
