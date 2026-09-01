@@ -7,12 +7,14 @@ $GREEN  = [System.ConsoleColor]::Green
 $YELLOW = [System.ConsoleColor]::Yellow
 $WHITE  = [System.ConsoleColor]::White
 $GRAY   = [System.ConsoleColor]::Gray
+$RED    = [System.ConsoleColor]::Red
 
 function Header($text) {
     Write-Host ""
-    Write-Host ("=" * 70) -ForegroundColor $CYAN
+    $line = "======================================================================"
+    Write-Host $line -ForegroundColor $CYAN
     Write-Host ("  " + $text) -ForegroundColor $CYAN
-    Write-Host ("=" * 70) -ForegroundColor $CYAN
+    Write-Host $line -ForegroundColor $CYAN
     Write-Host ""
 }
 
@@ -34,18 +36,14 @@ function Send-Cmd($port, $cmd) {
     }
 }
 
-# ================================================================
 # Build
-# ================================================================
 Header "RaftKVStore - Replicated KV Store with Raft Consensus"
 
 Write-Host "  Building project..." -ForegroundColor $GRAY
 cmake --build build 2>&1 | Out-Null
 Write-Host "  Build: OK" -ForegroundColor $GREEN
 
-# ================================================================
 # Test Suite
-# ================================================================
 Header "Test Suite (9 tests)"
 
 $testOutput = ctest --test-dir build --output-on-failure 2>&1
@@ -59,7 +57,7 @@ foreach ($line in $testLines) {
         if ($status -eq "Passed") {
             Write-Host ("  [{0}] {1,-25} PASSED" -f $testNum, $name) -ForegroundColor $GREEN
         } else {
-            Write-Host ("  [{0}] {1,-25} FAILED" -f $testNum, $name) -ForegroundColor Red
+            Write-Host ("  [{0}] {1,-25} FAILED" -f $testNum, $name) -ForegroundColor $RED
         }
         $testNum++
     }
@@ -69,12 +67,10 @@ Write-Host ""
 if ($testOutput -match "100% tests passed") {
     Write-Host "  Result: ALL 9 TESTS PASSED" -ForegroundColor $GREEN
 } else {
-    Write-Host "  Result: SOME TESTS FAILED" -ForegroundColor Red
+    Write-Host "  Result: SOME TESTS FAILED" -ForegroundColor $RED
 }
 
-# ================================================================
 # Benchmark
-# ================================================================
 Header "Latency Benchmark (1000 proposals, in-process)"
 
 $benchOutput = & .\build\test_benchmark.exe 2>&1
@@ -86,9 +82,7 @@ foreach ($line in ($benchOutput -split "`n")) {
 Write-Host ""
 Write-Host "  (In-process baseline. Production latency = fsync + network RTT)" -ForegroundColor $GRAY
 
-# ================================================================
 # Live Demo
-# ================================================================
 Header "Live Demo - 3-Node Cluster"
 
 Write-Host "  Starting 3-node cluster on localhost..." -ForegroundColor $GRAY
@@ -106,7 +100,6 @@ $p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data
 Write-Host "  Waiting for election..." -ForegroundColor $GRAY
 Start-Sleep -Seconds 8
 
-# Find leader (retry up to 5 times)
 $leaderPort = 0
 for ($attempt = 0; $attempt -lt 5; $attempt++) {
     foreach ($port in 7001,7002,7003) {
@@ -118,7 +111,7 @@ for ($attempt = 0; $attempt -lt 5; $attempt++) {
 }
 
 if ($leaderPort -eq 0) {
-    Write-Host "  ERROR: No leader elected" -ForegroundColor Red
+    Write-Host "  ERROR: No leader elected" -ForegroundColor $RED
     Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
     exit 1
 }
@@ -151,19 +144,18 @@ $r = Send-Cmd $followerPort "GET counter"
 Write-Host ("  > GET counter (follower) -> {0}" -f $r) -ForegroundColor $YELLOW
 Write-Host "  (follower redirects client to the leader)" -ForegroundColor $GRAY
 
-# ================================================================
-# Crash Recovery (proven by test_wal_crash_recovery above)
-# ================================================================
+# Crash Recovery
 Write-Host ""
 Write-Host "  Crash recovery: proven by test_wal_crash_recovery (test #5)" -ForegroundColor $YELLOW
-Write-Host "  WAL writes are fsync'd — data survives crash + restart" -ForegroundColor $GRAY
+Write-Host "  WAL writes are fsync'd - data survives crash + restart" -ForegroundColor $GRAY
 
 # Cleanup
 Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
 
+$line = "======================================================================"
 Write-Host ""
-Write-Host "======================================================================" -ForegroundColor $CYAN
+Write-Host $line -ForegroundColor $CYAN
 Write-Host "  RaftKVStore - https://github.com/YashrajOmar/NexusLOB" -ForegroundColor $CYAN
-Write-Host "======================================================================" -ForegroundColor $CYAN
+Write-Host $line -ForegroundColor $CYAN
 Write-Host ""
