@@ -32,29 +32,16 @@ I wanted to understand how distributed systems achieve consistency without a sin
 
 ## Demo
 
-```
-$ ./raftkvstore 1 ./data/n1 127.0.0.1:9991:8001 127.0.0.1:9992:8002 127.0.0.1:9993:8003
-$ ./raftkvstore 2 ./data/n2 ...
-$ ./raftkvstore 3 ./data/n3 ...
+![Demo](docs/demo.svg)
 
-=== RaftKVStore Demo ===
-Leader: node 2 (port 8002)
+### Run it yourself
 
-SET user:42 alice
--> OK
-GET user:42
--> OK alice
-SET counter 0
--> OK
-DEL user:42
--> OK alice
-GET user:42 (after delete)
--> OK
-GET counter (on follower)
--> NOTLEADER 2    # follower redirects to leader
+```bash
+# Run tests, benchmark, and live 3-node demo with colored output
+powershell -ExecutionPolicy Bypass -File scripts/show_results.ps1
 
-# Kill the leader (Ctrl+C), cluster elects a new one automatically.
-# Restart the killed node — it recovers from WAL and catches up.
+# Generate SVG for README (requires Python)
+python scripts/generate_svg.py
 ```
 
 ## Test Results
