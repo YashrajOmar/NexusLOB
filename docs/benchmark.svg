@@ -38,12 +38,12 @@
 </text><text x="40.00px" y="471.80px" xml:space="preserve">  Latency Benchmark (1000 proposals, in-process)
 </text><text x="40.00px" y="488.60px" xml:space="preserve">======================================================================
 </text><text x="40.00px" y="505.40px" xml:space="preserve">
-</text><text x="40.00px" y="522.20px" xml:space="preserve">  Average:    42.4466 us
-</text><text x="40.00px" y="539.00px" xml:space="preserve">  p50 (median): 33.5 us
-</text><text x="40.00px" y="555.80px" xml:space="preserve">  p90:         76.7 us
-</text><text x="40.00px" y="572.60px" xml:space="preserve">  p99:         96.8 us
-</text><text x="40.00px" y="589.40px" xml:space="preserve">  p99.9:       136.1 us
-</text><text x="40.00px" y="606.20px" xml:space="preserve">  Throughput:  23559 ops/sec
+</text><text x="40.00px" y="522.20px" xml:space="preserve">  Average:    40.3114 us
+</text><text x="40.00px" y="539.00px" xml:space="preserve">  p50 (median): 33.7 us
+</text><text x="40.00px" y="555.80px" xml:space="preserve">  p90:         68 us
+</text><text x="40.00px" y="572.60px" xml:space="preserve">  p99:         95.8 us
+</text><text x="40.00px" y="589.40px" xml:space="preserve">  p99.9:       223.4 us
+</text><text x="40.00px" y="606.20px" xml:space="preserve">  Throughput:  24806 ops/sec
 </text><text x="40.00px" y="623.00px" xml:space="preserve">
 </text><text x="40.00px" y="639.80px" xml:space="preserve">  (In-process baseline. Production latency = fsync + network RTT)
 </text><text x="40.00px" y="656.60px" xml:space="preserve">
@@ -53,7 +53,7 @@
 </text><text x="40.00px" y="723.80px" xml:space="preserve">
 </text><text x="40.00px" y="740.60px" xml:space="preserve">  Starting 3-node cluster on localhost...
 </text><text x="40.00px" y="757.40px" xml:space="preserve">  Waiting for election...
-</text><text x="40.00px" y="774.20px" xml:space="preserve">  Cluster elected leader: Node 3 (port 7003)
+</text><text x="40.00px" y="774.20px" xml:space="preserve">  Cluster elected leader: Node 1 (port 7001)
 </text><text x="40.00px" y="791.00px" xml:space="preserve">
 </text><text x="40.00px" y="807.80px" xml:space="preserve">  Client commands:
 </text><text x="40.00px" y="824.60px" xml:space="preserve">
@@ -64,7 +64,7 @@
 </text><text x="40.00px" y="908.60px" xml:space="preserve">  &gt; GET user:42            -&gt; OK
 </text><text x="40.00px" y="925.40px" xml:space="preserve">
 </text><text x="40.00px" y="942.20px" xml:space="preserve">  Follower redirect:
-</text><text x="40.00px" y="959.00px" xml:space="preserve">  &gt; GET counter (follower) -&gt; NOTLEADER 3
+</text><text x="40.00px" y="959.00px" xml:space="preserve">  &gt; GET counter (follower) -&gt; NOTLEADER 1
 </text><text x="40.00px" y="975.80px" xml:space="preserve">  (follower redirects client to the leader)
 </text><text x="40.00px" y="992.60px" xml:space="preserve">
 </text><text x="40.00px" y="1009.40px" xml:space="preserve">  Crash recovery: proven by test_wal_crash_recovery (test #5)
