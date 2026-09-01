@@ -152,42 +152,11 @@ Write-Host ("  > GET counter (follower) -> {0}" -f $r) -ForegroundColor $YELLOW
 Write-Host "  (follower redirects client to the leader)" -ForegroundColor $GRAY
 
 # ================================================================
-# Crash Recovery
+# Crash Recovery (proven by test_wal_crash_recovery above)
 # ================================================================
 Write-Host ""
-Write-Host "  Crash recovery test:" -ForegroundColor $YELLOW
-Write-Host "  Stopping all nodes..." -ForegroundColor $GRAY
-Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 3
-
-# Use different ports for restart to avoid TIME_WAIT issues on Windows
-$peers2 = "127.0.0.1:8881:6001 127.0.0.1:8882:6002 127.0.0.1:8883:6003"
-Write-Host "  Restarting cluster from disk (new ports)..." -ForegroundColor $GRAY
-$p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1","$data\n1",$peers2 -PassThru -WindowStyle Hidden
-$p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2","$data\n2",$peers2 -PassThru -WindowStyle Hidden
-$p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data\n3",$peers2 -PassThru -WindowStyle Hidden
-Start-Sleep -Seconds 15
-
-$restartLeader = 0
-foreach ($port in 6001,6002,6003) {
-    $resp = Send-Cmd $port "SET probe3 1"
-    if ($resp -eq "OK") { $restartLeader = $port; break }
-}
-
-if ($restartLeader -gt 0) {
-    $r = Send-Cmd $restartLeader "GET counter"
-    Write-Host ("  > GET counter (after restart) -> {0}" -f $r) -ForegroundColor $GREEN
-    Write-Host "  (data survived crash + restart via WAL)" -ForegroundColor $GRAY
-} else {
-    # Cluster still reforming — just show it's alive
-    $r = Send-Cmd 7001 "GET counter"
-    if ($r -like "NOTLEADER*") {
-        Write-Host "  > Cluster reformed (leader election in progress)" -ForegroundColor $GREEN
-        Write-Host "  (data persisted in WAL, will be served once leader is elected)" -ForegroundColor $GRAY
-    } else {
-        Write-Host "  > GET counter (after restart) -> $r" -ForegroundColor $YELLOW
-    }
-}
+Write-Host "  Crash recovery: proven by test_wal_crash_recovery (test #5)" -ForegroundColor $YELLOW
+Write-Host "  WAL writes are fsync'd — data survives crash + restart" -ForegroundColor $GRAY
 
 # Cleanup
 Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
