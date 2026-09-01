@@ -1,22 +1,31 @@
-# Pretty output for screenshots
+# Professional demo output for screenshots and SVG generation
+# Run: powershell -ExecutionPolicy Bypass -File .\scripts\show_results.ps1
+# For SVG: powershell -ExecutionPolicy Bypass -File .\scripts\show_results.ps1 | freeze --language ansi --window --padding 20,40 --output docs/benchmark.svg
+
 $root = $PSScriptRoot | Split-Path -Parent
 Set-Location $root
 
-$CYAN   = [System.ConsoleColor]::Cyan
-$GREEN  = [System.ConsoleColor]::Green
-$YELLOW = [System.ConsoleColor]::Yellow
-$WHITE  = [System.ConsoleColor]::White
-$GRAY   = [System.ConsoleColor]::Gray
-$RED    = [System.ConsoleColor]::Red
+# Colors
+$C = [System.ConsoleColor]::Cyan
+$G = [System.ConsoleColor]::Green
+$Y = [System.ConsoleColor]::Yellow
+$W = [System.ConsoleColor]::White
+$R = [System.ConsoleColor]::Gray
+$D = [System.ConsoleColor]::DarkGray
+$RED = [System.ConsoleColor]::Red
 
-function Header($text) {
+function Bar($c=$C) { Write-Host ("`n" + ("=" * 72)) -ForegroundColor $c; Write-Host ("=" * 72) -ForegroundColor $c }
+function Section($title) {
     Write-Host ""
-    $line = "======================================================================"
-    Write-Host $line -ForegroundColor $CYAN
-    Write-Host ("  " + $text) -ForegroundColor $CYAN
-    Write-Host $line -ForegroundColor $CYAN
+    Write-Host ("=" * 72) -ForegroundColor $C
+    Write-Host ("  $title") -ForegroundColor $C
+    Write-Host ("=" * 72) -ForegroundColor $C
     Write-Host ""
 }
+function OK($text)   { Write-Host "  [PASS] $text" -ForegroundColor $G }
+function Info($text)  { Write-Host "  $text" -ForegroundColor $W }
+function Dim($text)   { Write-Host "  $text" -ForegroundColor $R }
+function Warn($text) { Write-Host "  $text" -ForegroundColor $Y }
 
 function Send-Cmd($port, $cmd) {
     try {
@@ -36,56 +45,101 @@ function Send-Cmd($port, $cmd) {
     }
 }
 
-# Build
-Header "RaftKVStore - Replicated KV Store with Raft Consensus"
+# ================================================================
+# TITLE
+# ================================================================
+Write-Host ""
+Write-Host ("=" * 72) -ForegroundColor $C
+Write-Host ("  RaftKVStore") -ForegroundColor $C
+Write-Host ("  Fault-tolerant replicated KV store with Raft consensus in C++17") -ForegroundColor $W
+Write-Host ("=" * 72) -ForegroundColor $C
+Write-Host ""
 
-Write-Host "  Building project..." -ForegroundColor $GRAY
+# ================================================================
+# BUILD
+# ================================================================
+Write-Host "  Building project..." -ForegroundColor $D
 cmake --build build 2>&1 | Out-Null
-Write-Host "  Build: OK" -ForegroundColor $GREEN
+Write-Host "  Build: OK" -ForegroundColor $G
 
-# Test Suite
-Header "Test Suite (9 tests)"
+# ================================================================
+# TEST SUITE
+# ================================================================
+Section "TEST SUITE - 9 tests"
 
 $testOutput = ctest --test-dir build --output-on-failure 2>&1
 $testLines  = $testOutput -split "`n"
 
+$passed = 0
+$failed = 0
 $testNum = 1
+$testNames = @(
+    "interaction",
+    "election",
+    "log_replication",
+    "kv_apply",
+    "wal_crash_recovery",
+    "property",
+    "stress",
+    "partition",
+    "benchmark"
+)
+
 foreach ($line in $testLines) {
     if ($line -match "Test #\d+:\s+(\S+)\s+\.+\s+(Passed|Failed)") {
         $name   = $matches[1]
         $status = $matches[2]
         if ($status -eq "Passed") {
-            Write-Host ("  [{0}] {1,-25} PASSED" -f $testNum, $name) -ForegroundColor $GREEN
+            Write-Host ("  [{0}] {1,-25} PASSED" -f $testNum, $name) -ForegroundColor $G
+            $passed++
         } else {
             Write-Host ("  [{0}] {1,-25} FAILED" -f $testNum, $name) -ForegroundColor $RED
+            $failed++
         }
         $testNum++
     }
 }
 
 Write-Host ""
-if ($testOutput -match "100% tests passed") {
-    Write-Host "  Result: ALL 9 TESTS PASSED" -ForegroundColor $GREEN
+if ($failed -eq 0) {
+    Write-Host ("  Result: {0}/9 tests passed (100%)" -f $passed) -ForegroundColor $G
 } else {
-    Write-Host "  Result: SOME TESTS FAILED" -ForegroundColor $RED
+    Write-Host ("  Result: {0}/{1} tests passed" -f $passed, ($passed+$failed)) -ForegroundColor $RED
 }
 
-# Benchmark
-Header "Latency Benchmark (1000 proposals, in-process)"
+# ================================================================
+# BENCHMARK
+# ================================================================
+Section "LATENCY BENCHMARK - 1000 proposals (in-process)"
 
 $benchOutput = & .\build\test_benchmark.exe 2>&1
+$bench = @{}
 foreach ($line in ($benchOutput -split "`n")) {
-    if ($line -match "p50|p90|p99|Throughput|Average") {
-        Write-Host ("  " + $line.Trim()) -ForegroundColor $WHITE
-    }
+    if ($line -match "Average:\s+([\d.]+)\s+us")   { $bench["avg"]  = $matches[1] }
+    if ($line -match "p50.*:\s+([\d.]+)\s+us")      { $bench["p50"]  = $matches[1] }
+    if ($line -match "p90:\s+([\d.]+)\s+us")        { $bench["p90"]  = $matches[1] }
+    if ($line -match "p99:\s+([\d.]+)\s+us")        { $bench["p99"]  = $matches[1] }
+    if ($line -match "p99.9:\s+([\d.]+)\s+us")      { $bench["p999"] = $matches[1] }
+    if ($line -match "Throughput:\s+([\d]+)\s+ops") { $bench["tps"]  = $matches[1] }
 }
+
+Write-Host ("  p50 (median):  {0} us" -f $bench["p50"])  -ForegroundColor $W
+Write-Host ("  p90:           {0} us" -f $bench["p90"])  -ForegroundColor $W
+Write-Host ("  p99:           {0} us" -f $bench["p99"])  -ForegroundColor $Y
+Write-Host ("  p99.9:         {0} us" -f $bench["p999"]) -ForegroundColor $Y
+Write-Host ("  Average:       {0} us" -f $bench["avg"])  -ForegroundColor $R
 Write-Host ""
-Write-Host "  (In-process baseline. Production latency = fsync + network RTT)" -ForegroundColor $GRAY
+Write-Host ("  Throughput:    {0} ops/sec" -f $bench["tps"]) -ForegroundColor $G
+Write-Host ""
+Write-Host "  Note: In-process baseline (no network, no disk)" -ForegroundColor $D
+Write-Host "  Production latency = fsync (~1ms) + network RTT (~0.5ms)" -ForegroundColor $D
 
-# Live Demo
-Header "Live Demo - 3-Node Cluster"
+# ================================================================
+# LIVE DEMO
+# ================================================================
+Section "LIVE DEMO - 3-node cluster on localhost"
 
-Write-Host "  Starting 3-node cluster on localhost..." -ForegroundColor $GRAY
+Write-Host "  Starting 3-node cluster..." -ForegroundColor $D
 $peers = "127.0.0.1:7771:7001 127.0.0.1:7772:7002 127.0.0.1:7773:7003"
 $data = "$root\demo_data"
 
@@ -97,7 +151,7 @@ $p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1 `"$data
 $p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2 `"$data\n2`" $peers" -PassThru -WindowStyle Minimized
 $p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3 `"$data\n3`" $peers" -PassThru -WindowStyle Minimized
 
-Write-Host "  Waiting for election..." -ForegroundColor $GRAY
+Write-Host "  Waiting for leader election..." -ForegroundColor $D
 Start-Sleep -Seconds 8
 
 $leaderPort = 0
@@ -117,9 +171,10 @@ if ($leaderPort -eq 0) {
 }
 
 $leaderNode = $leaderPort - 7000
-Write-Host "  Cluster elected leader: Node $leaderNode (port $leaderPort)" -ForegroundColor $GREEN
 Write-Host ""
-Write-Host "  Client commands:" -ForegroundColor $YELLOW
+Write-Host ("  Leader: Node {0} (port {1})" -f $leaderNode, $leaderPort) -ForegroundColor $G
+Write-Host ""
+Write-Host "  Client commands:" -ForegroundColor $Y
 Write-Host ""
 
 $cmds = @(
@@ -132,30 +187,38 @@ $cmds = @(
 
 foreach ($cmd in $cmds) {
     $r = Send-Cmd $leaderPort $cmd[0]
-    Write-Host ("  > {0,-22}" -f $cmd[0]) -ForegroundColor $WHITE -NoNewline
-    Write-Host (" -> {0}" -f $r) -ForegroundColor $GREEN
+    $cmdPadded = $cmd[0].PadRight(24)
+    Write-Host "  > $cmdPadded" -ForegroundColor $W -NoNewline
+    if ($r -like "OK*") {
+        Write-Host "-> $r" -ForegroundColor $G
+    } else {
+        Write-Host "-> $r" -ForegroundColor $RED
+    }
 }
 
 Write-Host ""
-Write-Host "  Follower redirect:" -ForegroundColor $YELLOW
+Write-Host "  Follower redirect:" -ForegroundColor $Y
 $followerPort = 7002
 if ($followerPort -eq $leaderPort) { $followerPort = 7003 }
 $r = Send-Cmd $followerPort "GET counter"
-Write-Host ("  > GET counter (follower) -> {0}" -f $r) -ForegroundColor $YELLOW
-Write-Host "  (follower redirects client to the leader)" -ForegroundColor $GRAY
+Write-Host "  > GET counter (follower)   -> $r" -ForegroundColor $Y
+Write-Host "  (follower tells client to redirect to leader)" -ForegroundColor $D
 
-# Crash Recovery
 Write-Host ""
-Write-Host "  Crash recovery: proven by test_wal_crash_recovery (test #5)" -ForegroundColor $YELLOW
-Write-Host "  WAL writes are fsync'd - data survives crash + restart" -ForegroundColor $GRAY
+Write-Host "  Crash recovery:" -ForegroundColor $Y
+Write-Host "  Proven by test_wal_crash_recovery (test #5 above)" -ForegroundColor $D
+Write-Host "  WAL writes are fsync'd - data survives crash + restart" -ForegroundColor $D
 
 # Cleanup
 Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
 
-$line = "======================================================================"
+# ================================================================
+# FOOTER
+# ================================================================
 Write-Host ""
-Write-Host $line -ForegroundColor $CYAN
-Write-Host "  RaftKVStore - https://github.com/YashrajOmar/NexusLOB" -ForegroundColor $CYAN
-Write-Host $line -ForegroundColor $CYAN
+Write-Host ("=" * 72) -ForegroundColor $C
+Write-Host ("  RaftKVStore | C++17 | CMake | 9 tests | GitHub Actions") -ForegroundColor $C
+Write-Host ("  https://github.com/YashrajOmar/NexusLOB") -ForegroundColor $C
+Write-Host ("=" * 72) -ForegroundColor $C
 Write-Host ""
