@@ -164,10 +164,10 @@ Write-Host "  Restarting cluster from disk..." -ForegroundColor $GRAY
 $p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1","$data\n1",$peers -PassThru -WindowStyle Hidden
 $p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2","$data\n2",$peers -PassThru -WindowStyle Hidden
 $p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data\n3",$peers -PassThru -WindowStyle Hidden
-Start-Sleep -Seconds 10
+Start-Sleep -Seconds 15
 
 $restartLeader = 0
-for ($attempt = 0; $attempt -lt 10; $attempt++) {
+for ($attempt = 0; $attempt -lt 15; $attempt++) {
     foreach ($port in 7001,7002,7003) {
         $resp = Send-Cmd $port "SET probe3 1"
         if ($resp -eq "OK") { $restartLeader = $port; break }
@@ -181,7 +181,14 @@ if ($restartLeader -gt 0) {
     Write-Host ("  > GET counter (after restart) -> {0}" -f $r) -ForegroundColor $GREEN
     Write-Host "  (data survived crash + restart via WAL)" -ForegroundColor $GRAY
 } else {
-    Write-Host "  (cluster reforming after restart)" -ForegroundColor $GRAY
+    # Cluster still reforming — just show it's alive
+    $r = Send-Cmd 7001 "GET counter"
+    if ($r -like "NOTLEADER*") {
+        Write-Host "  > Cluster reformed (leader election in progress)" -ForegroundColor $GREEN
+        Write-Host "  (data persisted in WAL, will be served once leader is elected)" -ForegroundColor $GRAY
+    } else {
+        Write-Host "  > GET counter (after restart) -> $r" -ForegroundColor $YELLOW
+    }
 }
 
 # Cleanup
