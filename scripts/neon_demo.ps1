@@ -207,9 +207,6 @@ New-Item -ItemType Directory -Path "$root\docs" -Force | Out-Null
 $freezePath = (Get-Command freeze -ErrorAction SilentlyContinue)
 if ($freezePath) {
     & freeze --language ansi --window --padding 20,40 --input $tempFile --output $svgPath 2>&1 | Out-Null
-    Write-Host "$GRAY  SVG saved: docs/demo.svg$RESET" -ForegroundColor DarkGray
-} else {
-    Write-Host "$RED  freeze not found. Install: winget install charmbracelet.freeze$RESET" -ForegroundColor Red
 }
 
 Remove-Item $tempFile -ErrorAction SilentlyContinue
