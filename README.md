@@ -34,52 +34,48 @@ I wanted to understand how distributed systems achieve consistency without a sin
 
 ![Demo](docs/demo.svg)
 
-### Run it yourself
-
-```bash
-# Run tests, benchmark, and live 3-node demo with colored output
-powershell -ExecutionPolicy Bypass -File scripts/show_results.ps1
-
-# Generate SVG for README (requires Python)
-python scripts/generate_svg.py
-```
-
 ## Test Results
 
 ```
-$ ctest --test-dir build --output-on-failure
+9/9 tests passed (100%)
 
-1/9 Test #1: interaction ......................   Passed    0.02 sec
-2/9 Test #2: election .........................   Passed    0.02 sec
-3/9 Test #3: log_replication ..................   Passed    0.02 sec
-4/9 Test #4: kv_apply .........................   Passed    0.01 sec
-5/9 Test #5: wal_crash_recovery ...............   Passed    0.02 sec
-6/9 Test #6: property .........................   Passed    1.39 sec
-7/9 Test #7: stress ...........................   Passed    1.47 sec
-8/9 Test #8: partition ........................   Passed    0.03 sec
-9/9 Test #9: benchmark ........................   Passed    0.06 sec
-
-100% tests passed, 0 tests failed out of 9
+  [1] interaction          PASS
+  [2] election             PASS
+  [3] log_replication      PASS
+  [4] kv_apply             PASS
+  [5] wal_crash_recovery   PASS
+  [6] property             PASS
+  [7] stress               PASS
+  [8] partition            PASS
+  [9] benchmark            PASS
 ```
 
 ## Benchmark
 
 ```
-$ ./build/test_benchmark
+Latency Benchmark - 1000 proposals (in-process, no network/disk)
 
-=== Benchmark Results (in-process, no network/disk) ===
-  Samples:    1000
-  Average:    44 us
-  p50 (median): 43 us
-  p90:         51 us
-  p99:         65 us
-  p99.9:       149 us
-  Max:         149 us
-  Min:         40 us
-  Throughput:  22,333 ops/sec
+  p50 (median):  33.5 us
+  p90:           35.8 us
+  p99:           48.2 us
+  p99.9:         98.8 us
+  Average:       34.2419 us
+
+  Throughput:    29,203 ops/sec
+
+  Note: In-process baseline. Production latency = fsync (~1ms) + network RTT (~0.5ms)
 ```
 
 This is the **algorithm-only baseline** (in-process, no network, no disk). Real-world latency will be dominated by `fsync` (~1ms) and network RTT (~0.5ms). The optimization roadmap below targets those.
+
+## Live Demo
+
+The SVG above shows a real 3-node cluster running on localhost. Here's what happens:
+
+- **3 nodes start** and automatically elect a leader via Raft consensus
+- **Client commands** (SET/GET/DEL) are sent to the leader
+- **Follower redirect** — if you connect to a follower, it returns `NOTLEADER <id>` so the client can redirect
+- **Crash recovery** — WAL writes are fsync'd, so data survives crash + restart (proven by `test_wal_crash_recovery`)
 
 ## Build
 
