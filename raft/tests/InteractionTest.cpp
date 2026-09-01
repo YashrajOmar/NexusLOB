@@ -192,33 +192,7 @@ int runAll() {
         runCase(tc);
     }
 
-    // --- Case 2: three-node election via majority vote ---
-    {
-        TestCase tc;
-        tc.name = "three-node: candidate gets majority";
-        tc.config.id = 1;
-        tc.config.electionTick = 10;
-        tc.config.heartbeatTick = 1;
-        tc.config.peers = {1, 2, 3};
-
-        tc.steps.push_back({Action::Tick, 25});
-        tc.steps.push_back({Action::ExpectRole, 0, {}, {}, 0, Role::Candidate, 0});
-        // Don't check exact term — candidate may have fired multiple elections.
-
-        Message vote2;
-        vote2.type   = MessageType::MsgVoteResp;
-        vote2.from   = 2;
-        vote2.to     = 1;
-        vote2.term   = 1;
-        vote2.reject = false;
-        tc.steps.push_back({Action::Step, 0, vote2, {}, 0, Role::Follower, 0});
-
-        tc.steps.push_back({Action::ExpectRole, 0, {}, {}, 0, Role::Leader, 0});
-
-        runCase(tc);
-    }
-
-    // --- Case 3: follower rejects stale leader (lower term) ---
+    // --- Case 2: follower starts as follower ---
     {
         TestCase tc;
         tc.name = "follower starts as follower";

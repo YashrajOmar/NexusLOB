@@ -138,7 +138,12 @@ bool RaftLog::maybeAppend(Index prevLogIndex, Term prevLogTerm,
     Index conflict = findConflict(entries);
 
     if (conflict == 0) {
-        // No conflict, nothing to append.
+        // No conflict. But the follower may have extra entries from a
+        // previous leader beyond lastNewIndex. Truncate them — the
+        // leader's log is authoritative (Leader Completeness Property).
+        if (lastNewIndex < lastIndex()) {
+            unstable_.truncateFrom(lastNewIndex + 1);
+        }
     } else if (conflict <= committed_) {
         // Conflict below committed. A correct leader never sends entries
         // that conflict with committed entries. If this happens, it means

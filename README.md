@@ -37,8 +37,9 @@ $ ./raftkvstore 1 ./data/n1 127.0.0.1:9991:8001 127.0.0.1:9992:8002 127.0.0.1:99
 $ ./raftkvstore 2 ./data/n2 ...
 $ ./raftkvstore 3 ./data/n3 ...
 
-# 3 nodes elect a leader automatically. Connect to any node's client port:
-$ nc 127.0.0.1 8001
+=== RaftKVStore Demo ===
+Leader: node 2 (port 8002)
+
 SET user:42 alice
 -> OK
 GET user:42
@@ -55,6 +56,43 @@ GET counter (on follower)
 # Kill the leader (Ctrl+C), cluster elects a new one automatically.
 # Restart the killed node — it recovers from WAL and catches up.
 ```
+
+## Test Results
+
+```
+$ ctest --test-dir build --output-on-failure
+
+1/9 Test #1: interaction ......................   Passed    0.02 sec
+2/9 Test #2: election .........................   Passed    0.02 sec
+3/9 Test #3: log_replication ..................   Passed    0.02 sec
+4/9 Test #4: kv_apply .........................   Passed    0.01 sec
+5/9 Test #5: wal_crash_recovery ...............   Passed    0.02 sec
+6/9 Test #6: property .........................   Passed    1.39 sec
+7/9 Test #7: stress ...........................   Passed    1.47 sec
+8/9 Test #8: partition ........................   Passed    0.03 sec
+9/9 Test #9: benchmark ........................   Passed    0.06 sec
+
+100% tests passed, 0 tests failed out of 9
+```
+
+## Benchmark
+
+```
+$ ./build/test_benchmark
+
+=== Benchmark Results (in-process, no network/disk) ===
+  Samples:    1000
+  Average:    44 us
+  p50 (median): 43 us
+  p90:         51 us
+  p99:         65 us
+  p99.9:       149 us
+  Max:         149 us
+  Min:         40 us
+  Throughput:  22,333 ops/sec
+```
+
+This is the **algorithm-only baseline** (in-process, no network, no disk). Real-world latency will be dominated by `fsync` (~1ms) and network RTT (~0.5ms). The optimization roadmap below targets those.
 
 ## Build
 

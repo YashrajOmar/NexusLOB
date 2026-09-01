@@ -394,10 +394,14 @@ void RawNode::sendAppend(NodeId to) {
         sendSnapshot(to);
         return;
     }
-    if (ents.empty()) return;
+
+    // In Probe state, send even if empty — this lets the follower reject
+    // if it has divergent entries, so the leader can decrement nextIndex.
+    // In Replicate state, skip empty appends (nothing new to send).
+    if (ents.empty() && pr.state != ProgressState::Probe) return;
 
     // Track in-flight for flow control (Replicate state).
-    if (pr.state == ProgressState::Replicate) {
+    if (pr.state == ProgressState::Replicate && !ents.empty()) {
         if (pr.inflights.full()) return;  // backpressure
         pr.inflights.add(ents.back().index);
     }

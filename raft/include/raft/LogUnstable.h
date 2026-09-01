@@ -45,6 +45,9 @@ public:
     // Clears entries and sets offset to snap.index + 1.
     void restore(const Snapshot& snap);
 
+    // Truncate (remove) all entries with index >= fromIndex.
+    void truncateFrom(Index fromIndex);
+
     // --- accessors used by RaftLog ---
 
     bool hasSnapshot() const { return snapshot_.has_value(); }

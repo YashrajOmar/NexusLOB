@@ -75,6 +75,18 @@ void LogUnstable::restore(const Snapshot& snap) {
     offset_ = snap.index + 1;
 }
 
+void LogUnstable::truncateFrom(Index fromIndex) {
+    if (entries_.empty()) return;
+    if (fromIndex < offset_) {
+        entries_.clear();
+        return;
+    }
+    Index cut = fromIndex - offset_;
+    if (cut < entries_.size()) {
+        entries_.resize(cut);
+    }
+}
+
 void LogUnstable::append(const std::vector<Entry>& entries) {
     truncateAndAppend(entries);
 }
