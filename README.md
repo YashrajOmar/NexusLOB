@@ -32,7 +32,7 @@ I wanted to understand how distributed systems achieve consistency without a sin
 
 ## Demo
 
-![Demo](docs/benchmark.svg)
+![Demo](docs/demo.svg)
 
 ### Run it yourself
 

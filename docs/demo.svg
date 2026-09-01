@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
-<svg width="671.67" height="1142.00" xmlns="http://www.w3.org/2000/svg">
+<svg width="688.33" height="856.00" xmlns="http://www.w3.org/2000/svg">
 <style>
 @font-face {
 	font-family: &apos;JetBrains Mono&apos;;
@@ -8,72 +8,8 @@
 	font-weight: normal;
 	font-style: normal;
 }
-</style><rect width="671.67" height="1142.00" fill="#171717" x="0.00px" y="0.00px"/>
+</style><rect width="688.33" height="856.00" fill="#171717" x="0.00px" y="0.00px"/>
 <g font-family="JetBrains Mono" font-size="14.00px" fill="#c4c4c4" clip-path="url(#terminalMask)">
-<text x="40.00px" y="51.80px" xml:space="preserve">
-</text><text x="40.00px" y="68.60px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="85.40px" xml:space="preserve">  RaftKVStore - Replicated KV Store with Raft Consensus
-</text><text x="40.00px" y="102.20px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="119.00px" xml:space="preserve">
-</text><text x="40.00px" y="135.80px" xml:space="preserve">  Building project...
-</text><text x="40.00px" y="152.60px" xml:space="preserve">  Build: OK
-</text><text x="40.00px" y="169.40px" xml:space="preserve">
-</text><text x="40.00px" y="186.20px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="203.00px" xml:space="preserve">  Test Suite (9 tests)
-</text><text x="40.00px" y="219.80px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="236.60px" xml:space="preserve">
-</text><text x="40.00px" y="253.40px" xml:space="preserve">  [1] interaction               PASSED
-</text><text x="40.00px" y="270.20px" xml:space="preserve">  [2] election                  PASSED
-</text><text x="40.00px" y="287.00px" xml:space="preserve">  [3] log_replication           PASSED
-</text><text x="40.00px" y="303.80px" xml:space="preserve">  [4] kv_apply                  PASSED
-</text><text x="40.00px" y="320.60px" xml:space="preserve">  [5] wal_crash_recovery        PASSED
-</text><text x="40.00px" y="337.40px" xml:space="preserve">  [6] property                  PASSED
-</text><text x="40.00px" y="354.20px" xml:space="preserve">  [7] stress                    PASSED
-</text><text x="40.00px" y="371.00px" xml:space="preserve">  [8] partition                 PASSED
-</text><text x="40.00px" y="387.80px" xml:space="preserve">  [9] benchmark                 PASSED
-</text><text x="40.00px" y="404.60px" xml:space="preserve">
-</text><text x="40.00px" y="421.40px" xml:space="preserve">  Result: ALL 9 TESTS PASSED
-</text><text x="40.00px" y="438.20px" xml:space="preserve">
-</text><text x="40.00px" y="455.00px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="471.80px" xml:space="preserve">  Latency Benchmark (1000 proposals, in-process)
-</text><text x="40.00px" y="488.60px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="505.40px" xml:space="preserve">
-</text><text x="40.00px" y="522.20px" xml:space="preserve">  Average:    40.3114 us
-</text><text x="40.00px" y="539.00px" xml:space="preserve">  p50 (median): 33.7 us
-</text><text x="40.00px" y="555.80px" xml:space="preserve">  p90:         68 us
-</text><text x="40.00px" y="572.60px" xml:space="preserve">  p99:         95.8 us
-</text><text x="40.00px" y="589.40px" xml:space="preserve">  p99.9:       223.4 us
-</text><text x="40.00px" y="606.20px" xml:space="preserve">  Throughput:  24806 ops/sec
-</text><text x="40.00px" y="623.00px" xml:space="preserve">
-</text><text x="40.00px" y="639.80px" xml:space="preserve">  (In-process baseline. Production latency = fsync + network RTT)
-</text><text x="40.00px" y="656.60px" xml:space="preserve">
-</text><text x="40.00px" y="673.40px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="690.20px" xml:space="preserve">  Live Demo - 3-Node Cluster
-</text><text x="40.00px" y="707.00px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="723.80px" xml:space="preserve">
-</text><text x="40.00px" y="740.60px" xml:space="preserve">  Starting 3-node cluster on localhost...
-</text><text x="40.00px" y="757.40px" xml:space="preserve">  Waiting for election...
-</text><text x="40.00px" y="774.20px" xml:space="preserve">  Cluster elected leader: Node 1 (port 7001)
-</text><text x="40.00px" y="791.00px" xml:space="preserve">
-</text><text x="40.00px" y="807.80px" xml:space="preserve">  Client commands:
-</text><text x="40.00px" y="824.60px" xml:space="preserve">
-</text><text x="40.00px" y="841.40px" xml:space="preserve">  &gt; SET user:42 alice      -&gt; OK
-</text><text x="40.00px" y="858.20px" xml:space="preserve">  &gt; GET user:42            -&gt; OK alice
-</text><text x="40.00px" y="875.00px" xml:space="preserve">  &gt; SET counter 0          -&gt; OK
-</text><text x="40.00px" y="891.80px" xml:space="preserve">  &gt; DEL user:42            -&gt; OK alice
-</text><text x="40.00px" y="908.60px" xml:space="preserve">  &gt; GET user:42            -&gt; OK
-</text><text x="40.00px" y="925.40px" xml:space="preserve">
-</text><text x="40.00px" y="942.20px" xml:space="preserve">  Follower redirect:
-</text><text x="40.00px" y="959.00px" xml:space="preserve">  &gt; GET counter (follower) -&gt; NOTLEADER 1
-</text><text x="40.00px" y="975.80px" xml:space="preserve">  (follower redirects client to the leader)
-</text><text x="40.00px" y="992.60px" xml:space="preserve">
-</text><text x="40.00px" y="1009.40px" xml:space="preserve">  Crash recovery: proven by test_wal_crash_recovery (test #5)
-</text><text x="40.00px" y="1026.20px" xml:space="preserve">  WAL writes are fsync&apos;d - data survives crash + restart
-</text><text x="40.00px" y="1043.00px" xml:space="preserve">
-</text><text x="40.00px" y="1059.80px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="1076.60px" xml:space="preserve">  RaftKVStore - https://github.com/YashrajOmar/NexusLOB
-</text><text x="40.00px" y="1093.40px" xml:space="preserve">======================================================================
-</text><text x="40.00px" y="1110.20px" xml:space="preserve">
-</text>
+<text x="40.00px" y="51.80px" xml:space="preserve"/><text x="40.00px" y="68.60px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="85.40px" xml:space="preserve"><tspan xml:space="preserve">  RaftKVStore</tspan></text><text x="40.00px" y="102.20px" xml:space="preserve"><tspan xml:space="preserve">  Fault-tolerant replicated KV store with Raft consensus in C++17</tspan></text><text x="40.00px" y="119.00px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="135.80px" xml:space="preserve"/><text x="40.00px" y="152.60px" xml:space="preserve"><tspan xml:space="preserve">  Building project...</tspan></text><text x="40.00px" y="169.40px" xml:space="preserve"><tspan xml:space="preserve">  Build: OK</tspan></text><text x="40.00px" y="186.20px" xml:space="preserve"/><text x="40.00px" y="203.00px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="219.80px" xml:space="preserve"><tspan xml:space="preserve">  TEST SUITE - 9 tests</tspan></text><text x="40.00px" y="236.60px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="253.40px" xml:space="preserve"/><text x="40.00px" y="270.20px" xml:space="preserve"><tspan xml:space="preserve">  [1] interaction               PASSED</tspan></text><text x="40.00px" y="287.00px" xml:space="preserve"><tspan xml:space="preserve">  [2] election                  PASSED</tspan></text><text x="40.00px" y="303.80px" xml:space="preserve"><tspan xml:space="preserve">  [3] log_replication           PASSED</tspan></text><text x="40.00px" y="320.60px" xml:space="preserve"><tspan xml:space="preserve">  [4] kv_apply                  PASSED</tspan></text><text x="40.00px" y="337.40px" xml:space="preserve"><tspan xml:space="preserve">  [5] wal_crash_recovery        PASSED</tspan></text><text x="40.00px" y="354.20px" xml:space="preserve"><tspan xml:space="preserve">  [6] property                  PASSED</tspan></text><text x="40.00px" y="371.00px" xml:space="preserve"><tspan xml:space="preserve">  [7] stress                    PASSED</tspan></text><text x="40.00px" y="387.80px" xml:space="preserve"><tspan xml:space="preserve">  [8] partition                 PASSED</tspan></text><text x="40.00px" y="404.60px" xml:space="preserve"><tspan xml:space="preserve">  [9] benchmark                 PASSED</tspan></text><text x="40.00px" y="421.40px" xml:space="preserve"/><text x="40.00px" y="438.20px" xml:space="preserve"><tspan xml:space="preserve">  Result: 9/9 tests passed (100%)</tspan></text><text x="40.00px" y="455.00px" xml:space="preserve"/><text x="40.00px" y="471.80px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="488.60px" xml:space="preserve"><tspan xml:space="preserve">  LATENCY BENCHMARK - 1000 proposals (in-process)</tspan></text><text x="40.00px" y="505.40px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="522.20px" xml:space="preserve"/><text x="40.00px" y="539.00px" xml:space="preserve"><tspan xml:space="preserve">  p50 (median):  34.8 us</tspan></text><text x="40.00px" y="555.80px" xml:space="preserve"><tspan xml:space="preserve">  p90:           42.3 us</tspan></text><text x="40.00px" y="572.60px" xml:space="preserve"><tspan xml:space="preserve">  p99:           64.2 us</tspan></text><text x="40.00px" y="589.40px" xml:space="preserve"><tspan xml:space="preserve">  p99.9:         99.5 us</tspan></text><text x="40.00px" y="606.20px" xml:space="preserve"><tspan xml:space="preserve">  Average:       36.4188 us</tspan></text><text x="40.00px" y="623.00px" xml:space="preserve"/><text x="40.00px" y="639.80px" xml:space="preserve"><tspan xml:space="preserve">  Throughput:    27458 ops/sec</tspan></text><text x="40.00px" y="656.60px" xml:space="preserve"/><text x="40.00px" y="673.40px" xml:space="preserve"><tspan xml:space="preserve">  Note: In-process baseline (no network, no disk)</tspan></text><text x="40.00px" y="690.20px" xml:space="preserve"><tspan xml:space="preserve">  Production latency = fsync (~1ms) + network RTT (~0.5ms)</tspan></text><text x="40.00px" y="707.00px" xml:space="preserve"/><text x="40.00px" y="723.80px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="740.60px" xml:space="preserve"><tspan xml:space="preserve">  LIVE DEMO - 3-node cluster on localhost</tspan></text><text x="40.00px" y="757.40px" xml:space="preserve"><tspan xml:space="preserve">========================================================================</tspan></text><text x="40.00px" y="774.20px" xml:space="preserve"/><text x="40.00px" y="791.00px" xml:space="preserve"><tspan xml:space="preserve">  Starting 3-node cluster...</tspan></text><text x="40.00px" y="807.80px" xml:space="preserve"><tspan xml:space="preserve">  Waiting for leader election...</tspan></text><text x="40.00px" y="824.60px" xml:space="preserve"><tspan xml:space="preserve">  ERROR: No leader elected</tspan></text>
 </g>
 <svg x="0.00px" y="0.00px"><circle cx="13.50" cy="12.00" r="5.50" fill="#FF5A54"/><circle cx="32.50" cy="12.00" r="5.50" fill="#E6BF29"/><circle cx="51.50" cy="12.00" r="5.50" fill="#52C12B"/></svg></svg>

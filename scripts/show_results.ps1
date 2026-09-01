@@ -6,6 +6,11 @@
 $root = $PSScriptRoot | Split-Path -Parent
 Set-Location $root
 
+# Save output to file
+$logFile = "$root\docs\demo_output.txt"
+New-Item -ItemType Directory -Path "$root\docs" -Force | Out-Null
+Start-Transcript -Path $logFile -Force -ErrorAction SilentlyContinue | Out-Null
+
 $C = [System.ConsoleColor]::Cyan
 $G = [System.ConsoleColor]::Green
 $Y = [System.ConsoleColor]::Yellow
@@ -198,4 +203,11 @@ Write-Host ("=" * 72) -ForegroundColor $C
 Write-Host ("  RaftKVStore | C++17 | CMake | 9 tests | GitHub Actions") -ForegroundColor $C
 Write-Host ("  https://github.com/YashrajOmar/NexusLOB") -ForegroundColor $C
 Write-Host ("=" * 72) -ForegroundColor $C
+Write-Host ""
+
+# Stop saving
+Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+
+Write-Host ""
+Write-Host "  Output saved to: docs\demo_output.txt" -ForegroundColor $D
 Write-Host ""
