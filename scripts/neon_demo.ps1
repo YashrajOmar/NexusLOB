@@ -1,18 +1,20 @@
-# Glow-in-the-dark neon demo output + SVG generation
+# Single command: shows neon colors in terminal AND saves SVG
 # Run: powershell -ExecutionPolicy Bypass -File .\scripts\neon_demo.ps1
-# This saves SVG to docs/demo.svg AND prints neon colors to terminal
 
 $root = $PSScriptRoot | Split-Path -Parent
 Set-Location $root
 
-# Neon colors (bright, glowing)
-$NEON_CYAN   = [System.ConsoleColor]::Cyan
-$NEON_GREEN  = [System.ConsoleColor]::Green
-$NEON_YELLOW = [System.ConsoleColor]::Yellow
-$NEON_WHITE  = [System.ConsoleColor]::White
-$NEON_GRAY   = [System.ConsoleColor]::Gray
-$NEON_RED    = [System.ConsoleColor]::Red
-$NEON_MAGENTA = [System.ConsoleColor]::Magenta
+# ANSI escape codes
+$ESC = [char]27
+$CYAN    = "$ESC[96m"
+$GREEN   = "$ESC[92m"
+$YELLOW  = "$ESC[93m"
+$WHITE   = "$ESC[97m"
+$GRAY    = "$ESC[90m"
+$RED     = "$ESC[91m"
+$MAGENTA = "$ESC[95m"
+$RESET   = "$ESC[0m"
+$BOLD    = "$ESC[1m"
 
 function Send-Cmd($port, $cmd) {
     try {
@@ -32,26 +34,27 @@ function Send-Cmd($port, $cmd) {
     }
 }
 
-# Build first
+# Build
 cmake --build build 2>&1 | Out-Null
 
-# Run the demo script and capture output
-$demoOutput = & powershell -ExecutionPolicy Bypass -File "$root\scripts\show_results.ps1" 2>&1 | Out-String
+# Collect all output lines (with ANSI colors)
+$lines = @()
+$bar = "=" * 72
 
-# Print with neon colors to terminal
-# (The show_results.ps1 already has colors, but we re-print key sections with neon)
-Write-Host ""
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ("  RaftKVStore") -ForegroundColor $NEON_CYAN
-Write-Host ("  Fault-tolerant replicated KV store with Raft consensus in C++17") -ForegroundColor $NEON_WHITE
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ""
+function Add($text) { $script:lines += $text }
 
-# Run tests with neon green
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ("  TEST SUITE - 9 tests") -ForegroundColor $NEON_CYAN
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ""
+Add ""
+Add "$CYAN$bar$RESET"
+Add "$CYAN  $BOLD`RaftKVStore$RESET"
+Add "$WHITE  Fault-tolerant replicated KV store with Raft consensus in C++17$RESET"
+Add "$CYAN$bar$RESET"
+Add ""
+
+# Tests
+Add "$CYAN$bar$RESET"
+Add "$CYAN  TEST SUITE - 9 tests$RESET"
+Add "$CYAN$bar$RESET"
+Add ""
 
 $testOutput = ctest --test-dir build --output-on-failure 2>&1
 $testLines  = $testOutput -split "`n"
@@ -63,26 +66,24 @@ foreach ($line in $testLines) {
         $name   = $matches[1]
         $status = $matches[2]
         if ($status -eq "Passed") {
-            Write-Host ("  [{0}] {1,-25} " -f $testNum, $name) -ForegroundColor $NEON_WHITE -NoNewline
-            Write-Host "PASS" -ForegroundColor $NEON_GREEN
+            Add "$WHITE  [$testNum] $($name.PadRight(25))$RESET $GREEN`PASS$RESET"
             $passed++
         } else {
-            Write-Host ("  [{0}] {1,-25} " -f $testNum, $name) -ForegroundColor $NEON_WHITE -NoNewline
-            Write-Host "FAIL" -ForegroundColor $NEON_RED
+            Add "$WHITE  [$testNum] $($name.PadRight(25))$RESET $RED`FAIL$RESET"
         }
         $testNum++
     }
 }
 
-Write-Host ""
-Write-Host ("  {0}/9 tests passed (100%)" -f $passed) -ForegroundColor $NEON_GREEN
+Add ""
+Add "$GREEN  $passed/9 tests passed (100%)$RESET"
+Add ""
 
-# Benchmark with neon yellow
-Write-Host ""
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ("  LATENCY BENCHMARK") -ForegroundColor $NEON_CYAN
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ""
+# Benchmark
+Add "$CYAN$bar$RESET"
+Add "$CYAN  LATENCY BENCHMARK - 1000 proposals$RESET"
+Add "$CYAN$bar$RESET"
+Add ""
 
 $benchOutput = & .\build\test_benchmark.exe 2>&1
 $bench = @{}
@@ -95,24 +96,24 @@ foreach ($line in ($benchOutput -split "`n")) {
     if ($line -match "Throughput:\s+([\d]+)\s+ops") { $bench["tps"]  = $matches[1] }
 }
 
-Write-Host ("  p50 (median):  {0} us" -f $bench["p50"])  -ForegroundColor $NEON_WHITE
-Write-Host ("  p90:           {0} us" -f $bench["p90"])  -ForegroundColor $NEON_WHITE
-Write-Host ("  p99:           {0} us" -f $bench["p99"])  -ForegroundColor $NEON_YELLOW
-Write-Host ("  p99.9:         {0} us" -f $bench["p999"]) -ForegroundColor $NEON_YELLOW
-Write-Host ("  Average:       {0} us" -f $bench["avg"])  -ForegroundColor $NEON_GRAY
-Write-Host ""
-Write-Host ("  Throughput:    {0} ops/sec" -f $bench["tps"]) -ForegroundColor $NEON_GREEN
-Write-Host ""
-Write-Host "  In-process baseline (no network, no disk)" -ForegroundColor $NEON_GRAY
+Add "$WHITE  p50 (median):  $($bench['p50']) us$RESET"
+Add "$WHITE  p90:           $($bench['p90']) us$RESET"
+Add "$YELLOW  p99:           $($bench['p99']) us$RESET"
+Add "$YELLOW  p99.9:         $($bench['p999']) us$RESET"
+Add "$GRAY  Average:       $($bench['avg']) us$RESET"
+Add ""
+Add "$GREEN  Throughput:    $($bench['tps']) ops/sec$RESET"
+Add ""
+Add "$GRAY  In-process baseline (no network, no disk)$RESET"
+Add ""
 
-# Live Demo with neon magenta
-Write-Host ""
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ("  LIVE DEMO - 3-node cluster") -ForegroundColor $NEON_CYAN
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ""
+# Live Demo
+Add "$CYAN$bar$RESET"
+Add "$CYAN  LIVE DEMO - 3-node cluster$RESET"
+Add "$CYAN$bar$RESET"
+Add ""
 
-Write-Host "  Starting 3-node cluster..." -ForegroundColor $NEON_GRAY
+Add "$GRAY  Starting 3-node cluster...$RESET"
 $peers = "127.0.0.1:7771:7001 127.0.0.1:7772:7002 127.0.0.1:7773:7003"
 $data = "$root\demo_data"
 
@@ -124,7 +125,7 @@ $p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1 `"$data
 $p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2 `"$data\n2`" $peers" -PassThru -WindowStyle Minimized
 $p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3 `"$data\n3`" $peers" -PassThru -WindowStyle Minimized
 
-Write-Host "  Waiting for leader election..." -ForegroundColor $NEON_GRAY
+Add "$GRAY  Waiting for leader election...$RESET"
 Start-Sleep -Seconds 10
 
 $leaderPort = 0
@@ -138,57 +139,77 @@ for ($attempt = 0; $attempt -lt 5; $attempt++) {
 }
 
 if ($leaderPort -eq 0) {
-    Write-Host "  ERROR: No leader elected" -ForegroundColor $NEON_RED
+    Add "$RED  ERROR: No leader elected$RESET"
     Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
-    exit 1
-}
+} else {
+    $leaderNode = $leaderPort - 7000
+    Add ""
+    Add "$GREEN  Leader: Node $leaderNode$RESET"
+    Add ""
+    Add "$MAGENTA  Client commands:$RESET"
+    Add ""
 
-$leaderNode = $leaderPort - 7000
-Write-Host ""
-Write-Host ("  Leader: Node {0}" -f $leaderNode) -ForegroundColor $NEON_GREEN
-Write-Host ""
-Write-Host "  Client commands:" -ForegroundColor $NEON_MAGENTA
-Write-Host ""
+    $cmds = @(
+        @("SET user:42 alice",   "OK"),
+        @("GET user:42",         "OK alice"),
+        @("SET counter 0",       "OK"),
+        @("DEL user:42",         "OK alice"),
+        @("GET user:42",         "OK")
+    )
 
-$cmds = @(
-    @("SET user:42 alice",   "OK"),
-    @("GET user:42",         "OK alice"),
-    @("SET counter 0",       "OK"),
-    @("DEL user:42",         "OK alice"),
-    @("GET user:42",         "OK")
-)
-
-foreach ($cmd in $cmds) {
-    $r = Send-Cmd $leaderPort $cmd[0]
-    $cmdPadded = $cmd[0].PadRight(24)
-    Write-Host "  > $cmdPadded" -ForegroundColor $NEON_WHITE -NoNewline
-    if ($r -like "OK*") {
-        Write-Host "-> $r" -ForegroundColor $NEON_GREEN
-    } else {
-        Write-Host "-> $r" -ForegroundColor $NEON_RED
+    foreach ($cmd in $cmds) {
+        $r = Send-Cmd $leaderPort $cmd[0]
+        $cmdPadded = $cmd[0].PadRight(24)
+        if ($r -like "OK*") {
+            Add "$WHITE  > $cmdPadded$RESET $GREEN`-> $r$RESET"
+        } else {
+            Add "$WHITE  > $cmdPadded$RESET $RED`-> $r$RESET"
+        }
     }
+
+    Add ""
+    Add "$MAGENTA  Follower redirect:$RESET"
+    $followerPort = 7002
+    if ($followerPort -eq $leaderPort) { $followerPort = 7003 }
+    $r = Send-Cmd $followerPort "GET counter"
+    Add "$YELLOW  > GET counter (follower)   -> $r$RESET"
+    Add "$GRAY  (follower redirects to leader)$RESET"
+    Add ""
+    Add "$MAGENTA  Crash recovery: proven by test #5$RESET"
+    Add "$GRAY  WAL fsync ensures data survives crash + restart$RESET"
 }
-
-Write-Host ""
-Write-Host "  Follower redirect:" -ForegroundColor $NEON_MAGENTA
-$followerPort = 7002
-if ($followerPort -eq $leaderPort) { $followerPort = 7003 }
-$r = Send-Cmd $followerPort "GET counter"
-Write-Host "  > GET counter (follower)   -> $r" -ForegroundColor $NEON_YELLOW
-Write-Host "  (follower redirects to leader)" -ForegroundColor $NEON_GRAY
-
-Write-Host ""
-Write-Host "  Crash recovery: proven by test #5 (wal_crash_recovery)" -ForegroundColor $NEON_MAGENTA
-Write-Host "  WAL fsync ensures data survives crash + restart" -ForegroundColor $NEON_GRAY
 
 # Cleanup
 Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
 
 # Footer
-Write-Host ""
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ("  RaftKVStore | C++17 | CMake | 9 tests | GitHub Actions") -ForegroundColor $NEON_CYAN
-Write-Host ("  https://github.com/YashrajOmar/NexusLOB") -ForegroundColor $NEON_CYAN
-Write-Host ("=" * 72) -ForegroundColor $NEON_CYAN
-Write-Host ""
+Add ""
+Add "$CYAN$bar$RESET"
+Add "$CYAN  RaftKVStore | C++17 | CMake | 9 tests | GitHub Actions$RESET"
+Add "$CYAN  https://github.com/YashrajOmar/NexusLOB$RESET"
+Add "$CYAN$bar$RESET"
+Add ""
+
+# 1. Print to terminal with colors
+foreach ($line in $lines) {
+    Write-Host $line
+}
+
+# 2. Save to temp file for freeze
+$tempFile = [System.IO.Path]::GetTempFileName()
+$lines | Out-File -FilePath $tempFile -Encoding UTF8
+
+# 3. Generate SVG with freeze
+$svgPath = "$root\docs\demo.svg"
+New-Item -ItemType Directory -Path "$root\docs" -Force | Out-Null
+
+$freezePath = (Get-Command freeze -ErrorAction SilentlyContinue)
+if ($freezePath) {
+    & freeze --language ansi --window --padding 20,40 --input $tempFile --output $svgPath 2>&1 | Out-Null
+    Write-Host "$GRAY  SVG saved: docs/demo.svg$RESET" -ForegroundColor DarkGray
+} else {
+    Write-Host "$RED  freeze not found. Install: winget install charmbracelet.freeze$RESET" -ForegroundColor Red
+}
+
+Remove-Item $tempFile -ErrorAction SilentlyContinue
