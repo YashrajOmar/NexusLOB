@@ -158,17 +158,19 @@ Write-Host ""
 Write-Host "  Crash recovery test:" -ForegroundColor $YELLOW
 Write-Host "  Stopping all nodes..." -ForegroundColor $GRAY
 Stop-Process -Id $p1.Id,$p2.Id,$p3.Id -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 3
 
-Write-Host "  Restarting cluster from disk..." -ForegroundColor $GRAY
-$p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1","$data\n1",$peers -PassThru -WindowStyle Hidden
-$p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2","$data\n2",$peers -PassThru -WindowStyle Hidden
-$p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data\n3",$peers -PassThru -WindowStyle Hidden
+# Use different ports for restart to avoid TIME_WAIT issues on Windows
+$peers2 = "127.0.0.1:8881:6001 127.0.0.1:8882:6002 127.0.0.1:8883:6003"
+Write-Host "  Restarting cluster from disk (new ports)..." -ForegroundColor $GRAY
+$p1 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "1","$data\n1",$peers2 -PassThru -WindowStyle Hidden
+$p2 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "2","$data\n2",$peers2 -PassThru -WindowStyle Hidden
+$p3 = Start-Process -FilePath ".\build\raftkvstore.exe" -ArgumentList "3","$data\n3",$peers2 -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 15
 
 $restartLeader = 0
-for ($attempt = 0; $attempt -lt 15; $attempt++) {
-    foreach ($port in 7001,7002,7003) {
+for ($attempt = 0; $attempt -lt 10; $attempt++) {
+    foreach ($port in 6001,6002,6003) {
         $resp = Send-Cmd $port "SET probe3 1"
         if ($resp -eq "OK") { $restartLeader = $port; break }
     }
