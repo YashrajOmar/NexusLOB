@@ -37,13 +37,13 @@
 <text x="20.0" y="484" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
 <text x="20.0" y="502" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  Latency Benchmark (1000 proposals, in-process)</text>
 <text x="20.0" y="520" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
-<text x="20.0" y="556" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Average:    32.7984 us</text>
-<text x="20.0" y="574" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p50 (median): 28.9 us</text>
+<text x="20.0" y="556" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Average:    35.0771 us</text>
+<text x="20.0" y="574" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p50 (median): 34 us</text>
 <text x="20.0" y="592" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p90:         43.7 us</text>
-<text x="20.0" y="610" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99:         70.5 us</text>
-<text x="20.0" y="628" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       93.3 us</text>
-<text x="20.0" y="646" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       93.3 us</text>
-<text x="20.0" y="664" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Throughput:  30489 ops/sec</text>
+<text x="20.0" y="610" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99:         61.9 us</text>
+<text x="20.0" y="628" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       91.9 us</text>
+<text x="20.0" y="646" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  p99.9:       91.9 us</text>
+<text x="20.0" y="664" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#f8fafc">  Throughput:  28508 ops/sec</text>
 <text x="20.0" y="700" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#94a3b8">  (In-process baseline. Production latency = fsync + network RTT)</text>
 <text x="20.0" y="736" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">======================================================================</text>
 <text x="20.0" y="754" font-family="Consolas,Monaco,Courier,monospace" font-size="13" fill="#22d3ee">  Live Demo - 3-Node Cluster</text>
