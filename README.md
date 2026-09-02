@@ -1,8 +1,11 @@
-# RaftKVStore
+# RaftKVStore — Phase 1: Consensus Engine
 
 ![CI](https://github.com/YashrajOmar/NexusLOB/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+
+> **Phase 1 (Complete):** Raft consensus library + replicated KV store  
+> **Phase 2 (Next):** Connect to a quant trading system via Limit Order Book (LOB) interface
 
 A fault-tolerant, replicated key-value store implementing the Raft consensus algorithm from scratch in C++17.
 
