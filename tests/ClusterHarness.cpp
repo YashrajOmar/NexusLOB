@@ -53,6 +53,9 @@ void ClusterHarness::step(uint32_t n) {
             if (!rd.entries.empty()) {
                 storages_[id]->append(rd.entries);
             }
+            if (applyCallback_ && !rd.committedEntries.empty()) {
+                applyCallback_(id, rd.committedEntries);
+            }
             for (const auto& m : rd.messages) {
                 msgQueue_.push(m);
             }
@@ -67,6 +70,9 @@ void ClusterHarness::step(uint32_t n) {
         Ready rd = node->poll();
         if (!rd.entries.empty()) {
             storages_[id]->append(rd.entries);
+        }
+        if (applyCallback_ && !rd.committedEntries.empty()) {
+            applyCallback_(id, rd.committedEntries);
         }
         node->advance();
     }

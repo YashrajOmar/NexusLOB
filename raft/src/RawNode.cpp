@@ -40,6 +40,8 @@ RawNode::RawNode(const Config& c)
     , maxSizePerMsg_(c.maxSizePerMsg)
     , maxInflightMsgs_(c.maxInflightMsgs) {
 
+    readOnly_.setOption(c.readOnlyOption);
+
     auto init = c.storage->initialState();
     term_ = init.hardState.term;
     vote_ = init.hardState.vote;
@@ -194,6 +196,31 @@ bool RawNode::propose(const std::vector<uint8_t>& data) {
     return true;
 }
 
+bool RawNode::readIndex(const std::vector<uint8_t>& ctx) {
+    if (role_ != Role::Leader) return false;
+    if (ctx.empty()) return false;
+
+    // Register the read at the current commit index.
+    readOnly_.add(log_.commitIndex(), ctx);
+
+    // For Safe mode: broadcast a heartbeat with the context so followers
+    // can ack. For LeaseBased: no quorum check needed.
+    if (readOnly_.option() == ReadOnlyOption::Safe) {
+        for (auto& [id, pr] : pr_) {
+            if (id == id_) continue;
+            Message m;
+            m.type    = MessageType::MsgHeartbeat;
+            m.to      = id;
+            m.from    = id_;
+            m.term    = term_;
+            m.commit  = log_.commitIndex();
+            m.context = ctx;
+            send(m);
+        }
+    }
+    return true;
+}
+
 // ============================================================
 // Ready protocol
 // ============================================================
@@ -223,6 +250,10 @@ Ready RawNode::poll() {
     if (!rd.committedEntries.empty()) {
         lastReadyApplied_ = rd.committedEntries.back().index;
     }
+
+    // Hand off any pending ReadStates to the app.
+    rd.readStates = std::move(readStates_);
+    readStates_.clear();
 
     return rd;
 }
@@ -542,13 +573,73 @@ void RawNode::stepLeader(const Message& m) {
         case MessageType::MsgHeartbeatResp: {
             // Ack for a heartbeat. Also use it as a trigger to send
             // AppendEntries if the peer is behind (catch-up probe).
-            auto it = pr_.find(m.from);
-            if (it == pr_.end()) break;
-            Progress& pr = it->second;
-            if (pr.state == ProgressState::Replicate) {
-                sendAppend(m.from);
-            } else if (pr.state == ProgressState::Probe && !pr.paused) {
-                sendAppend(m.from);
+            {
+                auto it = pr_.find(m.from);
+                if (it == pr_.end()) break;
+                Progress& pr = it->second;
+                if (pr.state == ProgressState::Replicate) {
+                    sendAppend(m.from);
+                } else if (pr.state == ProgressState::Probe && !pr.paused) {
+                    sendAppend(m.from);
+                }
+            }
+
+            // ReadIndex: if this heartbeat resp carries a read context,
+            // record the ack. When quorum is reached, emit a ReadState.
+            if (!m.context.empty()) {
+                auto ackIndex = readOnly_.recvAck(m, quorum());
+                if (ackIndex.has_value()) {
+                    // Quorum reached. Advance and emit ReadState for this
+                    // and all earlier pending requests (same heartbeat round).
+                    auto ctx = m.context;
+                    auto idx = readOnly_.advance(ctx);
+                    if (idx.has_value()) {
+                        ReadState rs;
+                        rs.index = *idx;
+                        rs.requestCtx = ctx;
+                        readStates_.push_back(rs);
+
+                        // Reply to the original requestor (if a follower asked).
+                        auto rit = readRequestors_.find(ctx);
+                        if (rit != readRequestors_.end()) {
+                            NodeId to = rit->second;
+                            readRequestors_.erase(rit);
+                            Message resp;
+                            resp.type    = MessageType::MsgReadIndexResp;
+                            resp.to      = to;
+                            resp.from    = id_;
+                            resp.term    = term_;
+                            resp.index   = *idx;
+                            resp.context = ctx;
+                            send(resp);
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        case MessageType::MsgReadIndex: {
+            // A follower (or local client) wants a linearizable read.
+            // Register the request and broadcast a heartbeat with the context.
+            if (m.context.empty()) break;
+            readOnly_.add(log_.commitIndex(), m.context);
+            // Remember who asked so we can reply later.
+            if (m.from != id_) {
+                readRequestors_[m.context] = m.from;
+            }
+            // Broadcast heartbeat with the read context.
+            if (readOnly_.option() == ReadOnlyOption::Safe) {
+                for (auto& [id, pr] : pr_) {
+                    if (id == id_) continue;
+                    Message hb;
+                    hb.type    = MessageType::MsgHeartbeat;
+                    hb.to      = id;
+                    hb.from    = id_;
+                    hb.term    = term_;
+                    hb.commit  = log_.commitIndex();
+                    hb.context = m.context;
+                    send(hb);
+                }
             }
             break;
         }
@@ -693,6 +784,15 @@ void RawNode::stepFollower(const Message& m) {
             Message fwd = m;
             fwd.to = lead_;
             send(fwd);
+            break;
+        }
+        case MessageType::MsgReadIndexResp: {
+            // Leader confirmed we can read at index m.index. Emit a ReadState
+            // so the app waits for appliedIndex >= index, then serves the read.
+            ReadState rs;
+            rs.index = m.index;
+            rs.requestCtx = m.context;
+            readStates_.push_back(rs);
             break;
         }
         case MessageType::MsgTimeoutNow: {

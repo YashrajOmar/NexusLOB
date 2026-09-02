@@ -59,9 +59,15 @@ add_executable(raftkvstore
     app/storage/WriteAheadLog.cpp
     app/storage/SnapshotFile.cpp
     app/statemachine/KVStateMachine.cpp
+    app/statemachine/OrderBook.cpp
+    app/statemachine/LOBStateMachine.cpp
     app/net/RaftTransport.cpp
     app/net/ClientServer.cpp
+    app/net/OrderClientServer.cpp
     app/protocol/Protocol.cpp
+    app/protocol/OrderProtocol.cpp
+    app/protocol/KVCodec.cpp
+    app/protocol/LOBCodec.cpp
     app/server/Server.cpp
     app/Config.cpp
     app/main.cpp
@@ -131,6 +137,29 @@ target_include_directories(test_kv_apply PRIVATE
 )
 add_test(NAME kv_apply COMMAND test_kv_apply)
 
+# test_lob_apply: LOB matching engine correctness + latency baseline
+add_executable(test_lob_apply
+    tests/test_lob_apply.cpp
+    app/statemachine/OrderBook.cpp
+)
+target_include_directories(test_lob_apply PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/app
+)
+add_test(NAME lob_apply COMMAND test_lob_apply)
+
+# test_order_protocol: LOBStateMachine + binary order protocol
+add_executable(test_order_protocol
+    tests/test_order_protocol.cpp
+    app/statemachine/OrderBook.cpp
+    app/statemachine/LOBStateMachine.cpp
+    app/protocol/OrderProtocol.cpp
+)
+target_include_directories(test_order_protocol PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/app
+    ${CMAKE_CURRENT_SOURCE_DIR}/raft/include
+)
+add_test(NAME order_protocol COMMAND test_order_protocol)
+
 # test_wal_crash_recovery: WAL survives crash
 add_executable(test_wal_crash_recovery
     tests/test_wal_crash_recovery.cpp
@@ -150,11 +179,15 @@ add_custom_target(check
         test_election
         test_log_replication
         test_kv_apply
+        test_lob_apply
+        test_order_protocol
         test_wal_crash_recovery
         test_property
         test_stress
         test_partition
         test_benchmark
+        test_order_replication
+        test_lob_benchmark
 )
 
 # ============================================================
@@ -208,3 +241,35 @@ target_include_directories(test_benchmark PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/raft/include
 )
 add_test(NAME benchmark COMMAND test_benchmark)
+
+# test_order_replication: LOB orders replicated across 3-node cluster
+add_executable(test_order_replication
+    tests/test_order_replication.cpp
+    tests/ClusterHarness.cpp
+    app/statemachine/OrderBook.cpp
+    app/statemachine/LOBStateMachine.cpp
+    app/protocol/OrderProtocol.cpp
+)
+target_link_libraries(test_order_replication PRIVATE raft)
+target_include_directories(test_order_replication PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/app
+    ${CMAKE_CURRENT_SOURCE_DIR}/raft/include
+)
+add_test(NAME order_replication COMMAND test_order_replication)
+
+# test_lob_benchmark: replicated order latency (measure -> set targets)
+add_executable(test_lob_benchmark
+    tests/test_lob_benchmark.cpp
+    tests/ClusterHarness.cpp
+    app/statemachine/OrderBook.cpp
+    app/statemachine/LOBStateMachine.cpp
+    app/protocol/OrderProtocol.cpp
+)
+target_link_libraries(test_lob_benchmark PRIVATE raft)
+target_include_directories(test_lob_benchmark PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/app
+    ${CMAKE_CURRENT_SOURCE_DIR}/raft/include
+)
+add_test(NAME lob_benchmark COMMAND test_lob_benchmark)

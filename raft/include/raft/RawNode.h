@@ -24,6 +24,7 @@ struct Config {
     uint32_t  maxInflightMsgs   = 256;          // pipeline depth per peer
     std::vector<NodeId> peers;        // bootstrap only — used if log is empty
     std::vector<NodeId> learners;     // bootstrap only
+    ReadOnlyOption readOnlyOption = ReadOnlyOption::Safe;
 };
 
 // RawNode: the poll-based raft state machine. Single-threaded by contract —
@@ -56,6 +57,12 @@ public:
     // Propose a command to be replicated. Only valid on a leader.
     // Returns false if this node is not the leader.
     bool propose(const std::vector<uint8_t>& data);
+
+    // Request a linearizable read. The caller provides an opaque context
+    // token (ctx) that will be returned in the ReadState when the read
+    // is safe to perform. Only valid on a leader; followers should forward
+    // via MsgReadIndex. Returns false if not leader.
+    bool readIndex(const std::vector<uint8_t>& ctx);
 
     // --- Ready protocol ---
 
@@ -154,6 +161,10 @@ private:
     // --- config limits ---
     uint64_t maxSizePerMsg_;
     uint32_t maxInflightMsgs_;
+
+    // --- ReadIndex (linearizable reads) ---
+    std::vector<ReadState>              readStates_;
+    std::map<std::vector<uint8_t>, NodeId> readRequestors_;
 };
 
 } // namespace raft

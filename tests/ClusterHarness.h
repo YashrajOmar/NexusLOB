@@ -82,12 +82,13 @@ private:
 class ClusterHarness {
 public:
     using DropFilter = std::function<bool(NodeId from, NodeId to)>;
+    using ApplyCallback = std::function<void(NodeId, const std::vector<Entry>&)>;
 
     ClusterHarness(std::vector<NodeId> peers,
                   uint32_t electionTick = 10,
                   uint32_t heartbeatTick = 1);
 
-    // Tick all nodes by 'n' ticks, delivering messages between each tick.
+    // Step all nodes by 'n' ticks, delivering messages between each tick.
     void step(uint32_t n = 1);
 
     // Deliver all queued messages (applying the drop filter).
@@ -104,6 +105,10 @@ public:
     void setDropFilter(DropFilter f) { dropFilter_ = std::move(f); }
     void clearDropFilter() { dropFilter_ = nullptr; }
 
+    // Apply callback: called with committed entries for each node during
+    // step(). Lets tests attach FSMs that apply entries in real time.
+    void setApplyCallback(ApplyCallback cb) { applyCallback_ = std::move(cb); }
+
     // Find the current leader (or 0 if none).
     NodeId leader() const;
 
@@ -114,6 +119,7 @@ private:
     uint32_t                                     electionTick_;
     uint32_t                                     heartbeatTick_;
     DropFilter                                   dropFilter_;
+    ApplyCallback                                applyCallback_;
 
     std::map<NodeId, std::unique_ptr<RawNode>>      nodes_;
     std::map<NodeId, std::unique_ptr<MemoryStorage>> storages_;

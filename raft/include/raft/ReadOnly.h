@@ -55,6 +55,10 @@ public:
     // Reset all pending state. Called on term/leader changes.
     void reset();
 
+    // Change the read option (e.g., Safe <-> LeaseBased).
+    void setOption(ReadOnlyOption option) { option_ = option; }
+    ReadOnlyOption option() const { return option_; }
+
 private:
     ReadOnlyOption option_;
 

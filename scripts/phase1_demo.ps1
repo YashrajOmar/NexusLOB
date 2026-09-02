@@ -1,5 +1,5 @@
 # Single command: shows neon colors in terminal AND saves SVG
-# Run: powershell -ExecutionPolicy Bypass -File .\scripts\neon_demo.ps1
+# Run: powershell -ExecutionPolicy Bypass -File .\scripts\phase1_demo.ps1
 
 $root = $PSScriptRoot | Split-Path -Parent
 Set-Location $root
@@ -61,18 +61,23 @@ $testLines  = $testOutput -split "`n"
 
 $passed = 0
 $testNum = 1
-foreach ($line in $testLines) {
-    if ($line -match "Test #\d+:\s+(\S+)\s+\.+\s+(Passed|Failed)") {
-        $name   = $matches[1]
-        $status = $matches[2]
-        if ($status -eq "Passed") {
-            Add "$WHITE  [$testNum] $($name.PadRight(25))$RESET $GREEN`PASS$RESET"
-            $passed++
-        } else {
-            Add "$WHITE  [$testNum] $($name.PadRight(25))$RESET $RED`FAIL$RESET"
-        }
-        $testNum++
+$testNames = @(
+    "interaction", "election", "log_replication", "kv_apply",
+    "wal_crash_recovery", "property", "stress", "partition", "benchmark"
+)
+
+foreach ($tname in $testNames) {
+    $found = $false
+    foreach ($line in $testLines) {
+        if ($line -match "Test.*$tname.*Passed") { $found = $true; break }
     }
+    if ($found) {
+        Add "$WHITE  [$testNum] $($tname.PadRight(25))$RESET $GREEN`PASS$RESET"
+        $passed++
+    } else {
+        Add "$WHITE  [$testNum] $($tname.PadRight(25))$RESET $RED`FAIL$RESET"
+    }
+    $testNum++
 }
 
 Add ""
@@ -201,12 +206,12 @@ $tempFile = [System.IO.Path]::GetTempFileName()
 $lines | Out-File -FilePath $tempFile -Encoding UTF8
 
 # 3. Generate SVG with freeze
-$svgPath = "$root\docs\demo.svg"
+$svgPath = "$root\docs\phase1_demo.svg"
 New-Item -ItemType Directory -Path "$root\docs" -Force | Out-Null
 
 $freezePath = (Get-Command freeze -ErrorAction SilentlyContinue)
 if ($freezePath) {
-    & freeze --language ansi --window --padding 20,40 --input $tempFile --output $svgPath 2>&1 | Out-Null
+    & freeze $tempFile --language ansi --window --padding 20,40 -o $svgPath 2>&1 | Out-Null
 }
 
 Remove-Item $tempFile -ErrorAction SilentlyContinue

@@ -3,6 +3,7 @@
 #include "Types.h"
 #include "Storage.h"   // for HardState
 #include "RPC.h"       // for Message, Snapshot
+#include "ReadOnly.h"  // for ReadState
 
 #include <vector>
 #include <optional>
@@ -37,6 +38,10 @@ struct Ready {
     // Snapshot to apply to the FSM (InstallSnapshot received).
     // If non-empty, apply this before any committedEntries.
     std::optional<Snapshot> snapshot;
+
+    // ReadStates from ReadIndex/LeaseBased reads. The app should wait
+    // until appliedIndex >= ReadState.index, then serve the read.
+    std::vector<ReadState> readStates;
 
     // True if any entries were truncated relative to the last Ready.
     bool entriesRemoved = false;
