@@ -10,19 +10,20 @@
 #include <functional>
 #include <mutex>
 #include <atomic>
+#include <thread>
 
 namespace app {
 
-// RaftTransport: sends raft::Message to peers over TCP and delivers
-// received messages via a callback.
+// RaftTransport: sends raft::Message to peers over persistent TCP connections.
 //
-// Threading model:
-//   - send() is called from the raft loop thread (Server).
-//   - Received messages are delivered via onRecv on a background thread.
-//   - The caller (Server) is responsible for locking around RawNode.
+// Phase 4 optimizations:
+//   - Persistent connections (no TCP handshake per message)
+//   - Separate channels for heartbeats vs data (head-of-line blocking fix)
+//   - Parallel sends to all followers (concurrent, not sequential)
+//   - Thread-per-connection receive (concurrent receives)
 //
 // Wire format for a Message:
-//   [type:1][to:8][from:8][term:8][logTerm:8][index:8][commit:8]
+//   [totalLen:4][type:1][to:8][from:8][term:8][logTerm:8][index:8][commit:8]
 //   [reject:1][rejectHint:8][entriesCount:4]
 //   for each entry: [term:8][index:8][type:1][dataLen:4][data]
 //   [snapTerm:8][snapIndex:8][snapDataLen:4][snapData]
@@ -32,24 +33,24 @@ public:
     RaftTransport(raft::NodeId selfId, uint16_t listenPort);
     ~RaftTransport();
 
-    // Set the peer address map (NodeId → host:port).
     void setPeers(const std::map<raft::NodeId, PeerAddr>& peers);
-
-    // Register the callback invoked when a message arrives from a peer.
-    // Called on the transport's background thread.
     void setRecvCallback(std::function<void(const raft::Message&)> cb);
 
-    // Send a message to m.to. Returns false if peer unknown or send fails.
+    // Send a message to m.to over persistent connection. Returns false on failure.
+    // Heartbeats use a separate channel from data messages.
     bool send(const raft::Message& m);
 
-    // Start the background receive loop. Returns immediately.
     void start();
-
-    // Stop the background receive loop and close sockets.
     void stop();
 
 private:
-    void recvLoop();
+    void acceptLoop();
+    void connLoop(int sock);
+
+    // Get or create a persistent connection to a peer.
+    // channel=0 for data, channel=1 for heartbeats.
+    int getOrCreateConn(raft::NodeId to, int channel);
+    bool sendOnConn(int sock, const raft::Message& m);
 
     raft::NodeId                              selfId_;
     uint16_t                                  listenPort_;
@@ -58,6 +59,14 @@ private:
 
     std::atomic<bool>  running_{false};
     std::mutex         peersMutex_;
+
+    // Persistent connections: (NodeId, channel) → socket.
+    // channel 0 = data (AppendEntries, votes, etc.)
+    // channel 1 = heartbeat (heartbeats + heartbeat responses)
+    std::map<std::pair<raft::NodeId, int>, int> conns_;
+    std::mutex connsMutex_;
+
+    std::thread acceptThread_;
 };
 
 } // namespace app

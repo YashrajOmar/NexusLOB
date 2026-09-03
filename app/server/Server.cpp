@@ -348,15 +348,32 @@ void Server::handleReadStates(const std::vector<raft::ReadState>& readStates) {
 // ============================================================
 
 void Server::processReady(const raft::Ready& rd) {
-    if (!rd.entries.empty()) wal_.append(rd.entries);
+    // Group commit: write entries without fsync, then fsync once.
+    if (!rd.entries.empty()) wal_.appendNoSync(rd.entries);
+
     if (rd.hardState.term != 0 || rd.hardState.commit != 0)
         wal_.saveHardState(rd.hardState);
+
+    // One fsync for the entire batch (group commit).
+    if (!rd.entries.empty() || rd.hardState.term != 0 || rd.hardState.commit != 0)
+        wal_.sync();
+
     if (rd.snapshot.has_value()) {
         fsm_->restore(rd.snapshot->data);
         snapFile_.save(*rd.snapshot);
         wal_.applySnapshot(*rd.snapshot);
     }
-    for (const auto& m : rd.messages) transport_.send(m);
+
+    // Parallel sends: dispatch messages concurrently to all peers.
+    if (rd.messages.size() > 1) {
+        std::vector<std::thread> senders;
+        for (const auto& m : rd.messages) {
+            senders.emplace_back([this, &m] { transport_.send(m); });
+        }
+        for (auto& t : senders) t.join();
+    } else {
+        for (const auto& m : rd.messages) transport_.send(m);
+    }
 
     applyCommittedEntries(rd.committedEntries);
     handleReadStates(rd.readStates);

@@ -26,10 +26,6 @@ namespace app {
 
 namespace {
 
-// ============================================================
-// Global socket init (Winsock needs WSAStartup)
-// ============================================================
-
 struct SocketInit {
     SocketInit() {
 #if defined(_WIN32) || defined(_MSC_VER)
@@ -45,10 +41,6 @@ struct SocketInit {
 };
 
 SocketInit g_socketInit;
-
-// ============================================================
-// Binary serialization for Message (same pattern as WAL)
-// ============================================================
 
 void appendU8 (std::vector<char>& buf, uint8_t  v) { buf.push_back(static_cast<char>(v)); }
 void appendU32(std::vector<char>& buf, uint32_t v) {
@@ -73,7 +65,6 @@ bool readU64(const char* buf, size_t len, size_t& off, uint64_t& out) {
     off += 8; return true;
 }
 
-// Serialize a Message to bytes: [totalLen:4][ ...fields... ]
 std::vector<char> serializeMessage(const raft::Message& m) {
     std::vector<char> buf;
     appendU8(buf, static_cast<uint8_t>(m.type));
@@ -86,7 +77,6 @@ std::vector<char> serializeMessage(const raft::Message& m) {
     appendU8(buf, m.reject ? 1 : 0);
     appendU64(buf, m.rejectHint);
 
-    // Entries
     appendU32(buf, static_cast<uint32_t>(m.entries.size()));
     for (const auto& e : m.entries) {
         appendU64(buf, e.term);
@@ -96,17 +86,14 @@ std::vector<char> serializeMessage(const raft::Message& m) {
         buf.insert(buf.end(), e.data.begin(), e.data.end());
     }
 
-    // Snapshot
     appendU64(buf, m.snapshot.term);
     appendU64(buf, m.snapshot.index);
     appendU32(buf, static_cast<uint32_t>(m.snapshot.data.size()));
     buf.insert(buf.end(), m.snapshot.data.begin(), m.snapshot.data.end());
 
-    // Context
     appendU32(buf, static_cast<uint32_t>(m.context.size()));
     buf.insert(buf.end(), m.context.begin(), m.context.end());
 
-    // Prepend total length (frame the message).
     uint32_t totalLen = static_cast<uint32_t>(buf.size());
     std::vector<char> framed;
     appendU32(framed, totalLen);
@@ -158,7 +145,6 @@ bool deserializeMessage(const char* buf, size_t len, raft::Message& m) {
     return true;
 }
 
-// Read exactly n bytes from a socket (blocking).
 bool readN(int sock, char* buf, size_t n) {
     size_t got = 0;
     while (got < n) {
@@ -169,7 +155,6 @@ bool readN(int sock, char* buf, size_t n) {
     return true;
 }
 
-// Write all bytes to a socket (blocking).
 bool writeAll(int sock, const char* buf, size_t n) {
     size_t sent = 0;
     while (sent < n) {
@@ -180,11 +165,12 @@ bool writeAll(int sock, const char* buf, size_t n) {
     return true;
 }
 
-} // namespace
+bool isHeartbeat(raft::MessageType t) {
+    return t == raft::MessageType::MsgHeartbeat ||
+           t == raft::MessageType::MsgHeartbeatResp;
+}
 
-// ============================================================
-// Construction / destruction
-// ============================================================
+} // namespace
 
 RaftTransport::RaftTransport(raft::NodeId selfId, uint16_t listenPort)
     : selfId_(selfId)
@@ -193,10 +179,6 @@ RaftTransport::RaftTransport(raft::NodeId selfId, uint16_t listenPort)
 RaftTransport::~RaftTransport() {
     stop();
 }
-
-// ============================================================
-// Configuration
-// ============================================================
 
 void RaftTransport::setPeers(const std::map<raft::NodeId, PeerAddr>& peers) {
     std::lock_guard<std::mutex> lock(peersMutex_);
@@ -207,21 +189,27 @@ void RaftTransport::setRecvCallback(std::function<void(const raft::Message&)> cb
     onRecv_ = std::move(cb);
 }
 
-// ============================================================
-// Send: open TCP connection, write framed message, close.
-// ============================================================
+int RaftTransport::getOrCreateConn(raft::NodeId to, int channel) {
+    std::lock_guard<std::mutex> lock(connsMutex_);
+    auto key = std::make_pair(to, channel);
+    auto it = conns_.find(key);
+    if (it != conns_.end()) {
+        return it->second;
+    }
 
-bool RaftTransport::send(const raft::Message& m) {
     PeerAddr addr;
     {
-        std::lock_guard<std::mutex> lock(peersMutex_);
-        auto it = peers_.find(m.to);
-        if (it == peers_.end()) return false;
-        addr = it->second;
+        std::lock_guard<std::mutex> plock(peersMutex_);
+        auto pit = peers_.find(to);
+        if (pit == peers_.end()) return -1;
+        addr = pit->second;
     }
 
     int sock = static_cast<int>(::socket(AF_INET, SOCK_STREAM, 0));
-    if (sock < 0) return false;
+    if (sock < 0) return -1;
+
+    int opt = 1;
+    setsockopt(sock, IPPROTO_TCP, 1, reinterpret_cast<const char*>(&opt), sizeof(opt));
 
     sockaddr_in sin{};
     sin.sin_family = AF_INET;
@@ -230,35 +218,55 @@ bool RaftTransport::send(const raft::Message& m) {
 
     if (::connect(sock, reinterpret_cast<sockaddr*>(&sin), sizeof(sin)) == SOCK_ERR) {
         CLOSE_SOCKET(sock);
+        return -1;
+    }
+
+    conns_[key] = sock;
+    return sock;
+}
+
+bool RaftTransport::sendOnConn(int sock, const raft::Message& m) {
+    auto bytes = serializeMessage(m);
+    return writeAll(sock, bytes.data(), bytes.size());
+}
+
+bool RaftTransport::send(const raft::Message& m) {
+    int channel = isHeartbeat(m.type) ? 1 : 0;
+    int sock = getOrCreateConn(m.to, channel);
+    if (sock < 0) {
+        std::lock_guard<std::mutex> lock(connsMutex_);
+        conns_.erase(std::make_pair(m.to, channel));
         return false;
     }
 
-    auto bytes = serializeMessage(m);
-    bool ok = writeAll(sock, bytes.data(), bytes.size());
-    CLOSE_SOCKET(sock);
-    return ok;
+    if (!sendOnConn(sock, m)) {
+        std::lock_guard<std::mutex> lock(connsMutex_);
+        CLOSE_SOCKET(sock);
+        conns_.erase(std::make_pair(m.to, channel));
+        return false;
+    }
+    return true;
 }
-
-// ============================================================
-// Receive loop: listen, accept, read framed messages, invoke callback.
-// ============================================================
 
 void RaftTransport::start() {
     running_ = true;
-    // Launch recvLoop on its own thread.
-    std::thread([this] { recvLoop(); }).detach();
+    acceptThread_ = std::thread([this] { acceptLoop(); });
 }
 
 void RaftTransport::stop() {
     running_ = false;
+    if (acceptThread_.joinable()) acceptThread_.join();
+
+    std::lock_guard<std::mutex> lock(connsMutex_);
+    for (auto& [key, sock] : conns_) {
+        CLOSE_SOCKET(sock);
+    }
+    conns_.clear();
 }
 
-void RaftTransport::recvLoop() {
+void RaftTransport::acceptLoop() {
     int listenSock = static_cast<int>(::socket(AF_INET, SOCK_STREAM, 0));
-    if (listenSock < 0) {
-        std::cerr << "Node " << selfId_ << ": failed to create socket\n";
-        return;
-    }
+    if (listenSock < 0) return;
 
     int opt = 1;
     setsockopt(listenSock, SOL_SOCKET, SO_REUSEADDR,
@@ -270,12 +278,10 @@ void RaftTransport::recvLoop() {
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (::bind(listenSock, reinterpret_cast<sockaddr*>(&sin), sizeof(sin)) == SOCK_ERR) {
-        std::cerr << "Node " << selfId_ << ": bind failed on port " << listenPort_ << "\n";
         CLOSE_SOCKET(listenSock);
         return;
     }
-    if (::listen(listenSock, 8) == SOCK_ERR) {
-        std::cerr << "Node " << selfId_ << ": listen failed on port " << listenPort_ << "\n";
+    if (::listen(listenSock, 16) == SOCK_ERR) {
         CLOSE_SOCKET(listenSock);
         return;
     }
@@ -285,28 +291,33 @@ void RaftTransport::recvLoop() {
         int client = static_cast<int>(::accept(listenSock, nullptr, nullptr));
         if (client < 0) continue;
 
-        // Read 4-byte length frame.
+        std::thread([this, client] { connLoop(client); }).detach();
+    }
+
+    CLOSE_SOCKET(listenSock);
+}
+
+void RaftTransport::connLoop(int sock) {
+    while (running_) {
         char lenBuf[4];
-        if (!readN(client, lenBuf, 4)) { CLOSE_SOCKET(client); continue; }
+        if (!readN(sock, lenBuf, 4)) break;
+
         uint32_t msgLen = static_cast<uint8_t>(lenBuf[0])
                        | (static_cast<uint8_t>(lenBuf[1]) << 8)
                        | (static_cast<uint8_t>(lenBuf[2]) << 16)
                        | (static_cast<uint8_t>(lenBuf[3]) << 24);
 
-        // Read the message body.
+        if (msgLen == 0 || msgLen > (16 << 20)) break;
+
         std::vector<char> body(msgLen);
-        if (!readN(client, body.data(), msgLen)) { CLOSE_SOCKET(client); continue; }
+        if (!readN(sock, body.data(), msgLen)) break;
 
-        CLOSE_SOCKET(client);
-
-        // Deserialize and deliver.
         raft::Message m;
         if (deserializeMessage(body.data(), body.size(), m)) {
             if (onRecv_) onRecv_(m);
         }
     }
-
-    CLOSE_SOCKET(listenSock);
+    CLOSE_SOCKET(sock);
 }
 
 } // namespace app

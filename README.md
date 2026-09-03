@@ -68,7 +68,7 @@ Limit order book matching engine connected to the Raft consensus engine. Orders 
 - **Dependency injection** — Server has zero mode checks. FSM + codec + book reader all injected at construction. Adding a new FSM type doesn't change Server.
 - **ReadIndex wired into raft** — leader broadcasts heartbeat with token, waits for quorum acks, emits `ReadState`. Was stubbed in Phase 1, now connected end-to-end.
 
-### Tests (4 new, 13 total)
+### Tests (4 new, 14 total)
 
 | Test | What it checks |
 |---|---|
@@ -139,6 +139,44 @@ All three use the same Server, same `CommandCodec`, same `OrderClientServer`, sa
 
 ---
 
+## Phase 4 — Latency Optimization
+
+Group commit, persistent connections, parallel sends, and memory pool. Targets the I/O, network, and allocation bottlenecks identified in Phase 2/3 benchmarks.
+
+### What's built
+
+- **Group commit (batch fsync)** — `WriteAheadLog` now separates `appendNoSync()` (write without fsync) from `sync()` (one fsync per batch). Server writes all entries from a Ready, then fsyncs once instead of per-entry.
+- **Persistent TCP connections** — `RaftTransport` keeps connections open per peer (no TCP handshake per message). Connections stored in a map keyed by `(NodeId, channel)`.
+- **Separate heartbeat channel** — heartbeats use channel 1, data messages use channel 0. A stalled data stream won't block leader-liveness heartbeats (fixes head-of-line blocking).
+- **Parallel sends** — messages to multiple followers dispatched concurrently via threads instead of sequentially.
+- **Parallel receives** — each accepted connection gets its own thread, enabling concurrent message processing.
+- **Memory pool** — `MemoryPool<T>` pre-allocates order objects at startup. Zero heap allocation during matching.
+
+### Benchmark
+
+![Phase 4 Demo](docs/phase4_demo.svg)
+![Phase 4 Verification](docs/phase4_verify.svg)
+
+```
+Group Commit Benchmark (3-node cluster, in-process)
+
+  Single propose (Phase 2):
+    avg=789 us  p50=768 us  p99=1144 us  throughput=1,267 ops/sec
+
+  Batch propose (Phase 4, batch size 10):
+    avg=333 us  p50=332 us  p99=411 us   throughput=3,006 ops/sec
+
+  Improvement: 2.4x throughput, 2.4x latency reduction
+```
+
+### Tests (1 new, 14 total)
+
+| Test | What it checks |
+|---|---|
+| `test_phase4_benchmark` | Single vs batch propose latency comparison + consistency verification |
+
+---
+
 ## Architecture
 
 ```
@@ -164,7 +202,7 @@ app/                          Application — wires raft to real I/O
   server/                     Server (Ready loop, DI, 3 read modes), ReadMode
   Config.h/.cpp, main.cpp     Cluster config + entry point (--mode kv|lob|skiplob)
 
-tests/                        ClusterHarness + 13 test files
+tests/                        ClusterHarness + 14 test files
 scripts/                      Demo + crash test scripts
 docs/                         Demo SVGs (Phase 1 + 2 + 3)
 ```
@@ -221,15 +259,17 @@ ctest --test-dir build --output-on-failure
 powershell -ExecutionPolicy Bypass -File .\scripts\phase1_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\phase2_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\phase3_demo.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\phase4_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ```
 
 ---
 
-## Phase 4 (Next)
+## Phase 5 (Next)
 
-- **Group commit** — batch fsync across multiple entries (10x latency win)
-- **Pipelined AppendEntries** — don't wait for ack before sending the next batch
+- **Sharding** — per-symbol Raft groups for horizontal scaling
+- **Lock-free matching** — LMAX Disruptor-style ring buffer
+- **io_uring** — async disk I/O on Linux
 - **Membership changes** — `ConfChange` types are defined, the protocol isn't implemented
 
 ## References

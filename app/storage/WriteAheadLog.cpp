@@ -227,14 +227,12 @@ raft::Snapshot WriteAheadLog::snapshot() {
 // Write side (called by app/Server after poll())
 // ============================================================
 
-void WriteAheadLog::append(const std::vector<raft::Entry>& ents) {
+void WriteAheadLog::appendNoSync(const std::vector<raft::Entry>& ents) {
     if (ents.empty()) return;
     std::lock_guard<std::mutex> lock(mutex_);
-    // Truncate any existing entries from the first new entry onward (etcd pattern).
     raft::Index first = ents[0].index;
     if (first <= lastIndex()) {
         entries_.resize(first);
-        // Rewrite log.bin with the truncated log.
         logFile_.close();
         std::ofstream out(logPath_, std::ios::binary | std::ios::trunc);
         for (raft::Index i = snapIndex_ + 1; i < entries_.size(); ++i) {
@@ -249,7 +247,17 @@ void WriteAheadLog::append(const std::vector<raft::Entry>& ents) {
         writeEntry(logFile_, e);
         entries_.push_back(e);
     }
+    logFile_.flush();
+}
+
+void WriteAheadLog::sync() {
+    std::lock_guard<std::mutex> lock(mutex_);
     flushSync();
+}
+
+void WriteAheadLog::append(const std::vector<raft::Entry>& ents) {
+    appendNoSync(ents);
+    sync();
 }
 
 void WriteAheadLog::saveHardState(const raft::HardState& hs) {

@@ -191,6 +191,7 @@ add_custom_target(check
         test_benchmark
         test_order_replication
         test_lob_benchmark
+        test_phase4_benchmark
 )
 
 # ============================================================
@@ -278,3 +279,20 @@ target_include_directories(test_lob_benchmark PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/raft/include
 )
 add_test(NAME lob_benchmark COMMAND test_lob_benchmark)
+
+# test_phase4_benchmark: group commit vs single propose comparison
+add_executable(test_phase4_benchmark
+    tests/test_phase4_benchmark.cpp
+    tests/ClusterHarness.cpp
+    app/statemachine/MapOrderBook.cpp
+    app/statemachine/SkipListOrderBook.cpp
+    app/statemachine/LOBStateMachine.cpp
+    app/protocol/OrderProtocol.cpp
+)
+target_link_libraries(test_phase4_benchmark PRIVATE raft)
+target_include_directories(test_phase4_benchmark PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/app
+    ${CMAKE_CURRENT_SOURCE_DIR}/raft/include
+)
+add_test(NAME phase4_benchmark COMMAND test_phase4_benchmark)

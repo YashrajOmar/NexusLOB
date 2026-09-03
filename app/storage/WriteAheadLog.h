@@ -41,7 +41,14 @@ public:
 
     // --- Write side (called by app/Server after poll()) ---
 
-    // Append entries to log.bin and fsync. Used to persist Ready.entries.
+    // Append entries to log.bin WITHOUT fsync (group commit).
+    // Caller batches multiple appends, then calls sync() once.
+    void appendNoSync(const std::vector<raft::Entry>& ents);
+
+    // fsync the log file. Called once after a batch of appendNoSync calls.
+    void sync();
+
+    // Append entries to log.bin and fsync immediately (legacy, use appendNoSync + sync).
     void append(const std::vector<raft::Entry>& ents);
 
     // Overwrite hardstate.bin and fsync. Used to persist Ready.hardState.
