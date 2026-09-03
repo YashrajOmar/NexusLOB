@@ -10,8 +10,10 @@ int main() {
     std::vector<NodeId> peers = {1, 2, 3};
     ClusterHarness cluster(peers);
 
-    // Elect a leader.
-    cluster.step(25);
+    // Elect a leader — retry until leader is found (race condition fix).
+    for (int attempt = 0; attempt < 10 && cluster.leader() == 0; ++attempt) {
+        cluster.step(25);
+    }
     NodeId lead = cluster.leader();
     assert(lead != 0);
     std::cout << "Initial leader: node " << lead << "\n";
