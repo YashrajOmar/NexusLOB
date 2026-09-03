@@ -123,8 +123,8 @@ foreach ($bl in $benchLines) {
 
 P ""
 
-if (-not $benchSuccess) {
-    P "$RED  BENCHMARK FAILED — no results to report$RESET"
+if (!$benchSuccess) {
+    P "$RED  BENCHMARK FAILED - no results to report$RESET"
     P ""
     P "$CYAN$bar$RESET"
     P "$CYAN  OPTIMIZATIONS APPLIED$RESET"
@@ -150,25 +150,25 @@ P "$CYAN  OPTIMIZATIONS APPLIED$RESET"
 P "$CYAN$bar$RESET"
 P ""
 
-P "$WHITE  1. Group Commit (Batch fsync)$RESET"
-P "$GRAY    Before: fsync after every log entry (1 fsync per order)$RESET"
-P "$GRAY    After:  fsync once per batch (1 fsync per N orders)$RESET"
+P "$WHITE  1. Group Commit - Batch fsync$RESET"
+P "$GRAY    Before: fsync after every log entry - 1 fsync per order$RESET"
+P "$GRAY    After:  fsync once per batch - 1 fsync per N orders$RESET"
 if ($batchTps -and $singleTps) {
     $improvement = [math]::Round([double]$batchTps / [double]$singleTps, 1)
-    P "$GREEN    Result: ${improvement}x throughput improvement ($singleTps -> $batchTps ops/sec)$RESET"
+    P "$GREEN    Result: ${improvement}x throughput - $singleTps -> $batchTps ops/sec$RESET"
 }
 P ""
 
 P "$WHITE  2. Persistent TCP Connections$RESET"
 P "$GRAY    Before: open TCP connection, send, close per message$RESET"
 P "$GRAY    After:  keep connections open, reuse for all messages$RESET"
-P "$GRAY    Eliminates TCP handshake overhead (3-way handshake per msg)$RESET"
+P "$GRAY    Eliminates TCP handshake overhead - 3-way handshake per msg$RESET"
 P ""
 
-P "$White  3. Separate Heartbeat Channel$RESET"
+P "$WHITE  3. Separate Heartbeat Channel$RESET"
 P "$GRAY    Before: heartbeats and data share one TCP stream$RESET"
-P "$GRAY    After:  heartbeats use separate connection (channel 1)$RESET"
-P "$GRAY    Fixes head-of-line blocking: stalled data doesn't block liveness$RESET"
+P "$GRAY    After:  heartbeats use separate connection - channel 1$RESET"
+P "$GRAY    Fixes head-of-line blocking - stalled data does not block liveness$RESET"
 P ""
 
 P "$WHITE  4. Parallel Sends$RESET"
@@ -182,9 +182,9 @@ P "$GRAY    Before: single accept loop, one message at a time$RESET"
 P "$GRAY    After:  thread per connection, concurrent receives$RESET"
 P ""
 
-P "$WHITE  6. Memory Pool (Arena Allocator)$RESET"
+P "$WHITE  6. Memory Pool - Arena Allocator$RESET"
 P "$GRAY    Pre-allocates order objects at startup$RESET"
-P "$GRAY    No heap allocation during matching (zero-allocation latency)$RESET"
+P "$GRAY    No heap allocation during matching - zero-allocation latency$RESET"
 P "$GRAY    Available: app/statemachine/MemoryPool.h$RESET"
 P ""
 
