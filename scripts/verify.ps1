@@ -136,7 +136,8 @@ P ""
 $phase3Commit = git log --oneline 2>$null | Select-String "feat: Phase 3" | Select-Object -First 1
 $baseHash = ($phase3Commit.Line -split " ")[0]
 $newFiles = git diff --name-only --diff-filter=A $baseHash HEAD 2>$null | Where-Object { $_ -match '\.(cpp|h)$' }
-$modFiles = git diff --name-only --diff-filter=M $baseHash HEAD 2>$null | Where-Object { $_ -match '\.(cpp|h)$' }$new = if ($newFiles) { @($newFiles).Count } else { 0 }
+$modFiles = git diff --name-only --diff-filter=M $baseHash HEAD 2>$null | Where-Object { $_ -match '\.(cpp|h)$' }
+$new = if ($newFiles) { @($newFiles).Count } else { 0 }
 $mod = if ($modFiles) { @($modFiles).Count } else { 0 }
 P "$WHITE  New code files:      $new$RESET"
 P "$WHITE  Modified code files: $mod$RESET"
