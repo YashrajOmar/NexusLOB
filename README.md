@@ -14,7 +14,7 @@ The project follows etcd/raft's library-first architecture: a pure algorithm lay
 
 ## Phase 1 — Consensus Engine
 
-Raft consensus library + replicated KV store. Three nodes that agree on every write, survive crashes, and recover automatically.
+Raft consensus engine + replicated KV store. Three nodes that agree on every write, survive crashes, and recover automatically. The architecture mirrors etcd/raft's design (Ready struct, library-first separation) but is implemented from scratch — no etcd code, no external Raft library.
 
 ### What's built
 
@@ -189,8 +189,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ## References
 
 - [The Raft paper](https://raft.github.io/raft.pdf) — Ongaro & Ousterhout
-- [etcd/raft](https://github.com/etcd-io/raft) — the Go implementation whose architecture was followed
-- [etcd raftexample](https://github.com/etcd-io/etcd/tree/release-3.7/contrib/raftexample) — the Ready-loop pattern
+- [etcd/raft](https://github.com/etcd-io/raft) — the Go implementation whose architecture was replicated from scratch in C++
+- [etcd raftexample](https://github.com/etcd-io/etcd/tree/release-3.7/contrib/raftexample) — the Ready-loop pattern reimplemented here
 
 ## License
 
