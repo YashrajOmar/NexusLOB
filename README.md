@@ -161,12 +161,12 @@ Group commit, persistent connections, parallel sends, and memory pool. Targets t
 Group Commit Benchmark (3-node cluster, in-process)
 
   Single propose (Phase 2):
-    avg=789 us  p50=768 us  p99=1144 us  throughput=1,267 ops/sec
+    avg=771 us  p50=744 us  p99=1810 us  throughput=1,296 ops/sec
 
   Batch propose (Phase 4, batch size 10):
-    avg=333 us  p50=332 us  p99=411 us   throughput=3,006 ops/sec
+    avg=238 us  p50=238 us  p99=442 us   throughput=4,201 ops/sec
 
-  Improvement: 2.4x throughput, 2.4x latency reduction
+  Improvement: 3.2x throughput, 3.1x latency reduction
 ```
 
 ### Tests (1 new, 14 total)
