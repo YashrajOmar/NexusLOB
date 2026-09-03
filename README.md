@@ -3,8 +3,15 @@
 ![CI](https://github.com/YashrajOmar/NexusLOB/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
+![Tests](https://img.shields.io/badge/tests-16-brightgreen.svg)
 
-A fault-tolerant, replicated limit order book built on a from-scratch Raft consensus engine in C++17. Three nodes agree on every order, survive crashes, and recover automatically — the matching engine state is replicated across the cluster.
+> **Phase 1 (Complete):** Raft consensus engine + replicated KV store  
+> **Phase 2 (Complete):** LOB matching engine + binary order protocol + 3 read modes  
+> **Phase 3 (Complete):** Skip list matching engine via dependency injection  
+> **Phase 4 (Complete):** Group commit + persistent connections + parallel sends  
+> **Phase 5 (Complete):** Per-symbol sharding with independent Raft groups
+
+A fault-tolerant, replicated limit order book built on a from-scratch Raft consensus engine in C++17. Three nodes agree on every order, survive crashes, and recover automatically — the matching engine state is replicated across the cluster. Each symbol gets its own independent Raft group for horizontal scaling.
 
 Built without any Raft library. The consensus algorithm, write-ahead log, network transport, matching engine, and binary order protocol are all implemented from the ground up.
 
@@ -294,12 +301,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\phase1_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\phase2_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\phase3_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\phase4_demo.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\phase5_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ```
 
 ---
 
-## Phase 5 (Next)
+## Future Work
 
 - **Lock-free matching** — LMAX Disruptor-style ring buffer
 - **io_uring** — async disk I/O on Linux
