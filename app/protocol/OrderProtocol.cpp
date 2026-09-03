@@ -45,11 +45,110 @@ bool getI64(const std::vector<uint8_t>& buf, size_t& off, int64_t& out) {
     out = static_cast<int64_t>(u); return true;
 }
 
+// --- String helpers for sharded protocol ---
+
+void putStr(std::vector<uint8_t>& buf, size_t& off, const std::string& s) {
+    putU32(buf, off, static_cast<uint32_t>(s.size()));
+    if (off + s.size() > buf.size()) buf.resize(off + s.size());
+    for (size_t i = 0; i < s.size(); ++i) buf[off + i] = static_cast<uint8_t>(s[i]);
+    off += s.size();
+}
+
+bool getStr(const std::vector<uint8_t>& buf, size_t& off, std::string& out) {
+    uint32_t len;
+    if (!getU32(buf, off, len)) return false;
+    if (off + len > buf.size()) return false;
+    out.assign(reinterpret_cast<const char*>(buf.data() + off), len);
+    off += len;
+    return true;
+}
+
 } // namespace
 
 // ============================================================
-// Command encoding
+// Sharded command encoding
 // ============================================================
+
+std::vector<uint8_t> encodeShardedNew(const std::string& symbol,
+                                       uint64_t orderId, Side side,
+                                       int64_t price, int64_t quantity) {
+    std::vector<uint8_t> buf(1 + 4 + symbol.size() + 8 + 1 + 8 + 8);
+    size_t off = 0;
+    putU8 (buf, off, OP_SHARDED_NEW);
+    putStr (buf, off, symbol);
+    putU64(buf, off, orderId);
+    putU8 (buf, off, static_cast<uint8_t>(side));
+    putI64(buf, off, price);
+    putI64(buf, off, quantity);
+    return buf;
+}
+
+std::vector<uint8_t> encodeShardedCancel(const std::string& symbol,
+                                          uint64_t orderId) {
+    std::vector<uint8_t> buf(1 + 4 + symbol.size() + 8);
+    size_t off = 0;
+    putU8 (buf, off, OP_SHARDED_CXL);
+    putStr (buf, off, symbol);
+    putU64(buf, off, orderId);
+    return buf;
+}
+
+std::vector<uint8_t> encodeShardedModify(const std::string& symbol,
+                                          uint64_t orderId,
+                                          int64_t newPrice, int64_t newQuantity) {
+    std::vector<uint8_t> buf(1 + 4 + symbol.size() + 8 + 8 + 8);
+    size_t off = 0;
+    putU8 (buf, off, OP_SHARDED_MOD);
+    putStr (buf, off, symbol);
+    putU64(buf, off, orderId);
+    putI64(buf, off, newPrice);
+    putI64(buf, off, newQuantity);
+    return buf;
+}
+
+// ============================================================
+// Sharded command decoding
+// ============================================================
+
+bool decodeShardedNew(const std::vector<uint8_t>& data,
+                      std::string& symbol, uint64_t& orderId, Side& side,
+                      int64_t& price, int64_t& quantity) {
+    size_t off = 0;
+    uint8_t op;
+    if (!getU8(data, off, op) || op != OP_SHARDED_NEW) return false;
+    if (!getStr(data, off, symbol)) return false;
+    if (!getU64(data, off, orderId)) return false;
+    uint8_t s;
+    if (!getU8(data, off, s)) return false;
+    if (s > 1) return false;
+    side = static_cast<Side>(s);
+    if (!getI64(data, off, price)) return false;
+    if (!getI64(data, off, quantity)) return false;
+    return true;
+}
+
+bool decodeShardedCancel(const std::vector<uint8_t>& data,
+                         std::string& symbol, uint64_t& orderId) {
+    size_t off = 0;
+    uint8_t op;
+    if (!getU8(data, off, op) || op != OP_SHARDED_CXL) return false;
+    if (!getStr(data, off, symbol)) return false;
+    if (!getU64(data, off, orderId)) return false;
+    return true;
+}
+
+bool decodeShardedModify(const std::vector<uint8_t>& data,
+                         std::string& symbol, uint64_t& orderId,
+                         int64_t& newPrice, int64_t& newQuantity) {
+    size_t off = 0;
+    uint8_t op;
+    if (!getU8(data, off, op) || op != OP_SHARDED_MOD) return false;
+    if (!getStr(data, off, symbol)) return false;
+    if (!getU64(data, off, orderId)) return false;
+    if (!getI64(data, off, newPrice)) return false;
+    if (!getI64(data, off, newQuantity)) return false;
+    return true;
+}
 
 std::vector<uint8_t> encodeNew(uint64_t orderId, Side side,
                                int64_t price, int64_t quantity) {

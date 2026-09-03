@@ -20,7 +20,7 @@ function P($text) { $script:lines += $text }
 
 P ""
 P "$CYAN$bar$RESET"
-P "$CYAN  $BOLD`NexusLOB - Phase 4 Verification$RESET"
+P "$CYAN  $BOLD`NexusLOB - Phase 5 Verification$RESET"
 P "$CYAN$bar$RESET"
 P ""
 
@@ -57,7 +57,7 @@ P ""
 # ================================================================
 # 3. Tests
 # ================================================================
-P "$CYAN  [3] Test suite (14 tests)$RESET"
+P "$CYAN  [3] Test suite (16 tests)$RESET"
 P ""
 
 $testOutput = ctest --test-dir build --output-on-failure -j 1 2>&1
@@ -71,7 +71,7 @@ $phase1 = @(
     "wal_crash_recovery", "property", "stress", "partition", "benchmark"
 )
 $phase2 = @(
-    "lob_apply", "order_protocol", "order_replication", "lob_benchmark", "phase4_benchmark"
+    "lob_apply", "order_protocol", "order_replication", "lob_benchmark", "phase4_benchmark", "sharding", "phase5_benchmark"
 )
 
 P "$GRAY  --- Phase 1 ---$RESET"
@@ -136,8 +136,7 @@ P ""
 $phase3Commit = git log --oneline 2>$null | Select-String "feat: Phase 3" | Select-Object -First 1
 $baseHash = ($phase3Commit.Line -split " ")[0]
 $newFiles = git diff --name-only --diff-filter=A $baseHash HEAD 2>$null | Where-Object { $_ -match '\.(cpp|h)$' }
-$modFiles = git diff --name-only --diff-filter=M $baseHash HEAD 2>$null | Where-Object { $_ -match '\.(cpp|h)$' }
-$new = if ($newFiles) { @($newFiles).Count } else { 0 }
+$modFiles = git diff --name-only --diff-filter=M $baseHash HEAD 2>$null | Where-Object { $_ -match '\.(cpp|h)$' }$new = if ($newFiles) { @($newFiles).Count } else { 0 }
 $mod = if ($modFiles) { @($modFiles).Count } else { 0 }
 P "$WHITE  New code files:      $new$RESET"
 P "$WHITE  Modified code files: $mod$RESET"
@@ -152,7 +151,7 @@ if ($passed -eq $total) {
 } else {
     P "$RED  Some checks failed$RESET"
 }
-P "$CYAN  NexusLOB | Phase 4 Verification | C++17 | CMake | 14 tests$RESET"
+P "$CYAN  NexusLOB | Phase 5 Verification | C++17 | CMake | 16 tests$RESET"
 P "$CYAN$bar$RESET"
 P ""
 
@@ -161,10 +160,10 @@ foreach ($l in $script:lines) { Write-Host $l }
 # Save for freeze
 $tempFile = [System.IO.Path]::GetTempFileName()
 $script:lines | Out-File -FilePath $tempFile -Encoding UTF8
-$svgPath = "$root\docs\phase4_verify.svg"
+$svgPath = "$root\docs\phase5_verify.svg"
 $freezePath = (Get-Command freeze -ErrorAction SilentlyContinue)
 if ($freezePath) {
     & freeze $tempFile --language ansi --window --padding 20,40 -o $svgPath 2>&1 | Out-Null
-    Write-Host "$GRAY  SVG saved: docs/phase4_verify.svg$RESET"
+    Write-Host "$GRAY  SVG saved: docs/phase5_verify.svg$RESET"
 }
 Remove-Item $tempFile -ErrorAction SilentlyContinue

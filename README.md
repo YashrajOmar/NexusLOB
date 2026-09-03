@@ -177,6 +177,40 @@ Group Commit Benchmark (3-node cluster, in-process)
 
 ---
 
+## Phase 5 — Sharding
+
+Per-symbol Raft groups for horizontal scaling. Each symbol gets its own independent Raft group — RawNode, FSM, WAL — so load scales horizontally across cores or machines.
+
+### What's built
+
+- **`ShardManager`** — manages multiple Raft groups (one per symbol). Routes orders to the correct shard based on the symbol in the command. Creates shards lazily on first order for a new symbol.
+- **Sharded protocol** — `encodeShardedNew/Cxl/Mod` and `decodeShardedNew/Cxl/Mod` include the symbol in the binary payload. Backward-compatible with non-sharded commands.
+- **Independent Raft groups** — each shard has its own `RawNode`, `LOBStateMachine`, `WriteAheadLog`, and raft loop thread. Orders for AAPL and GOOG are processed in parallel.
+- **Symbol isolation** — orders for one symbol never affect another. Cancel on AAPL doesn't touch GOOG. Partition on AAPL doesn't disrupt GOOG.
+
+### Verification
+
+![Phase 5 Demo](docs/phase5_demo.svg)
+![Phase 5 Verification](docs/phase5_verify.svg)
+
+```
+Sharding Tests (5 tests)
+  1. Multi-symbol independent: AAPL and GOOG isolated
+  2. Multi-symbol matching: each book matches independently
+  3. Symbol isolation: cancel AAPL does not affect GOOG
+  4. Multi-symbol partition: AAPL partitioned, GOOG unaffected, both converge
+  5. Sharded protocol round-trip: encode/decode with symbol field
+```
+
+### Tests (2 new, 16 total)
+
+| Test | What it checks |
+|---|---|
+| `test_sharding` | 5 tests — multi-symbol independence, matching, isolation, partition heal, protocol round-trip |
+| `test_phase5_benchmark` | Sharded vs single-group throughput comparison |
+
+---
+
 ## Architecture
 
 ```
@@ -202,9 +236,9 @@ app/                          Application — wires raft to real I/O
   server/                     Server (Ready loop, DI, 3 read modes), ReadMode
   Config.h/.cpp, main.cpp     Cluster config + entry point (--mode kv|lob|skiplob)
 
-tests/                        ClusterHarness + 14 test files
+tests/                        ClusterHarness + 16 test files
 scripts/                      Demo + crash test scripts
-docs/                         Demo SVGs (Phase 1 + 2 + 3)
+docs/                         Demo SVGs - Phase 1 + 2 + 3 + 4 + 5
 ```
 
 **The key invariant:** `raft/` contains zero `#include` directives for files, sockets, or any I/O library. The algorithm never touches the outside world — it outputs a `Ready` struct describing what needs persisting/sending/applying, and the application layer does the actual I/O. Verified by grep.
@@ -267,7 +301,6 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 
 ## Phase 5 (Next)
 
-- **Sharding** — per-symbol Raft groups for horizontal scaling
 - **Lock-free matching** — LMAX Disruptor-style ring buffer
 - **io_uring** — async disk I/O on Linux
 - **Membership changes** — `ConfChange` types are defined, the protocol isn't implemented

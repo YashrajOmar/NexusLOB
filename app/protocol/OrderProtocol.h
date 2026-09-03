@@ -12,9 +12,15 @@ namespace order_protocol {
 //   NEW  — submit a new order (limit or market via extreme price)
 //   CXL  — cancel a resting order by id
 //   MOD  — cancel-replace a resting order (loses time priority)
+//   SHARDED_NEW — submit a new order with symbol (Phase 5 sharding)
+//   SHARDED_CXL — cancel with symbol
+//   SHARDED_MOD — modify with symbol
 constexpr uint8_t OP_NEW  = 0x10;
 constexpr uint8_t OP_CXL  = 0x11;
 constexpr uint8_t OP_MOD  = 0x12;
+constexpr uint8_t OP_SHARDED_NEW = 0x20;
+constexpr uint8_t OP_SHARDED_CXL = 0x21;
+constexpr uint8_t OP_SHARDED_MOD = 0x22;
 
 // --- Command encoding (client → raft payload) ---
 
@@ -26,6 +32,16 @@ std::vector<uint8_t> encodeCancel(uint64_t orderId);
 std::vector<uint8_t> encodeModify(uint64_t orderId,
                                   int64_t newPrice, int64_t newQuantity);
 
+// Sharded variants: include symbol in the payload for routing.
+std::vector<uint8_t> encodeShardedNew(const std::string& symbol,
+                                      uint64_t orderId, Side side,
+                                      int64_t price, int64_t quantity);
+std::vector<uint8_t> encodeShardedCancel(const std::string& symbol,
+                                         uint64_t orderId);
+std::vector<uint8_t> encodeShardedModify(const std::string& symbol,
+                                         uint64_t orderId,
+                                         int64_t newPrice, int64_t newQuantity);
+
 // --- Command decoding (raft payload → FSM apply) ---
 
 bool decodeNew(const std::vector<uint8_t>& data,
@@ -36,6 +52,15 @@ bool decodeCancel(const std::vector<uint8_t>& data, uint64_t& orderId);
 
 bool decodeModify(const std::vector<uint8_t>& data,
                   uint64_t& orderId, int64_t& newPrice, int64_t& newQuantity);
+
+bool decodeShardedNew(const std::vector<uint8_t>& data,
+                      std::string& symbol, uint64_t& orderId, Side& side,
+                      int64_t& price, int64_t& quantity);
+bool decodeShardedCancel(const std::vector<uint8_t>& data,
+                         std::string& symbol, uint64_t& orderId);
+bool decodeShardedModify(const std::vector<uint8_t>& data,
+                         std::string& symbol, uint64_t& orderId,
+                         int64_t& newPrice, int64_t& newQuantity);
 
 // --- Apply-result encoding (FSM apply → Server → client) ---
 
