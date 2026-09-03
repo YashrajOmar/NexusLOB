@@ -1,4 +1,5 @@
 #include "ClusterHarness.h"
+#include "../app/statemachine/MapOrderBook.h"
 #include "../app/statemachine/LOBStateMachine.h"
 #include "../app/protocol/OrderProtocol.h"
 
@@ -22,7 +23,8 @@ struct LobCluster {
     explicit LobCluster(std::vector<NodeId> peers)
         : ids(peers), harness(peers) {
         for (auto id : peers) {
-            fsms[id] = std::make_unique<LOBStateMachine>("LOB");
+            fsms[id] = std::make_unique<LOBStateMachine>(
+            std::make_unique<MapOrderBook>("LOB"));
         }
         // Wire the apply callback: when step() processes committed entries,
         // apply them to the corresponding FSM immediately.

@@ -1,25 +1,17 @@
-#include "statemachine/OrderBook.h"
+#include "statemachine/MapOrderBook.h"
 
 #include <algorithm>
 
 namespace app {
 
-// ============================================================
-// Construction
-// ============================================================
+MapOrderBook::MapOrderBook(std::string symbol) : symbol_(std::move(symbol)) {}
 
-OrderBook::OrderBook(std::string symbol) : symbol_(std::move(symbol)) {}
-
-// ============================================================
-// Mutations
-// ============================================================
-
-std::vector<Fill> OrderBook::newOrder(uint64_t orderId, Side side,
-                                      int64_t price, int64_t quantity,
-                                      uint64_t sequence) {
+std::vector<Fill> MapOrderBook::newOrder(uint64_t orderId, Side side,
+                                          int64_t price, int64_t quantity,
+                                          uint64_t sequence) {
     std::vector<Fill> fills;
     if (quantity <= 0) return fills;
-    if (orderIndex_.count(orderId)) return fills;  // reject duplicate id
+    if (orderIndex_.count(orderId)) return fills;
 
     int64_t remaining = quantity;
     fills = match(side, price, remaining, orderId);
@@ -31,7 +23,7 @@ std::vector<Fill> OrderBook::newOrder(uint64_t orderId, Side side,
     return fills;
 }
 
-bool OrderBook::cancelOrder(uint64_t orderId) {
+bool MapOrderBook::cancelOrder(uint64_t orderId) {
     auto it = orderIndex_.find(orderId);
     if (it == orderIndex_.end()) return false;
 
@@ -39,7 +31,6 @@ bool OrderBook::cancelOrder(uint64_t orderId) {
     int64_t  price = it->second.price;
     auto     listIt = it->second.it;
 
-    // bids_ and asks_ have different map types, so select by branch.
     if (side == Side::Buy) {
         auto& level = bids_.at(price);
         level.erase(listIt);
@@ -53,8 +44,8 @@ bool OrderBook::cancelOrder(uint64_t orderId) {
     return true;
 }
 
-bool OrderBook::modifyOrder(uint64_t orderId, int64_t newPrice,
-                            int64_t newQuantity, uint64_t newSequence) {
+bool MapOrderBook::modifyOrder(uint64_t orderId, int64_t newPrice,
+                               int64_t newQuantity, uint64_t newSequence) {
     auto it = orderIndex_.find(orderId);
     if (it == orderIndex_.end()) return false;
 
@@ -68,17 +59,11 @@ bool OrderBook::modifyOrder(uint64_t orderId, int64_t newPrice,
     return true;
 }
 
-// ============================================================
-// Matching
-// ============================================================
-
-std::vector<Fill> OrderBook::match(Side takerSide, int64_t takerPrice,
-                                    int64_t& remainingQty, uint64_t takerId) {
+std::vector<Fill> MapOrderBook::match(Side takerSide, int64_t takerPrice,
+                                       int64_t& remainingQty, uint64_t takerId) {
     std::vector<Fill> fills;
 
     while (remainingQty > 0) {
-        // Pick the opposite (maker) side's best level. The two sides use
-        // different map comparator types, so they are handled per-branch.
         int64_t          bestPrice = 0;
         std::list<Order>* levelPtr = nullptr;
 
@@ -104,7 +89,7 @@ std::vector<Fill> OrderBook::match(Side takerSide, int64_t takerPrice,
             Fill f;
             f.makerOrderId = maker.id;
             f.takerOrderId = takerId;
-            f.price        = maker.price;  // trade at maker price
+            f.price        = maker.price;
             f.quantity     = matchQty;
             f.takerSide    = takerSide;
             fills.push_back(f);
@@ -126,7 +111,7 @@ std::vector<Fill> OrderBook::match(Side takerSide, int64_t takerPrice,
     return fills;
 }
 
-void OrderBook::addResting(const Order& o) {
+void MapOrderBook::addResting(const Order& o) {
     std::list<Order>* levelPtr;
     if (o.side == Side::Buy) levelPtr = &bids_[o.price];
     else                     levelPtr = &asks_[o.price];
@@ -135,9 +120,16 @@ void OrderBook::addResting(const Order& o) {
     orderIndex_[o.id] = OrderLocation{o.side, o.price, std::prev(level.end())};
 }
 
-void OrderBook::addRestingOrder(const Order& o) { addResting(o); }
+void MapOrderBook::addRestingOrder(const Order& o) { addResting(o); }
 
-std::vector<Order> OrderBook::allOrders() const {
+void MapOrderBook::reset(std::string symbol) {
+    bids_.clear();
+    asks_.clear();
+    orderIndex_.clear();
+    symbol_ = std::move(symbol);
+}
+
+std::vector<Order> MapOrderBook::allOrders() const {
     std::vector<Order> out;
     for (const auto& [price, level] : bids_)
         for (const auto& o : level) out.push_back(o);
@@ -146,25 +138,17 @@ std::vector<Order> OrderBook::allOrders() const {
     return out;
 }
 
-// ============================================================
-// L3 queries
-// ============================================================
-
-const Order* OrderBook::getOrder(uint64_t orderId) const {
+const Order* MapOrderBook::getOrder(uint64_t orderId) const {
     auto it = orderIndex_.find(orderId);
     if (it == orderIndex_.end()) return nullptr;
     return &(*it->second.it);
 }
 
-size_t OrderBook::orderCount() const { return orderIndex_.size(); }
+size_t MapOrderBook::orderCount() const { return orderIndex_.size(); }
 
-const std::string& OrderBook::symbol() const { return symbol_; }
+const std::string& MapOrderBook::symbol() const { return symbol_; }
 
-// ============================================================
-// L2 queries (aggregated depth)
-// ============================================================
-
-std::vector<PriceLevel> OrderBook::bids(size_t maxLevels) const {
+std::vector<PriceLevel> MapOrderBook::bids(size_t maxLevels) const {
     std::vector<PriceLevel> out;
     for (const auto& [price, level] : bids_) {
         PriceLevel pl{price, 0, 0};
@@ -178,7 +162,7 @@ std::vector<PriceLevel> OrderBook::bids(size_t maxLevels) const {
     return out;
 }
 
-std::vector<PriceLevel> OrderBook::asks(size_t maxLevels) const {
+std::vector<PriceLevel> MapOrderBook::asks(size_t maxLevels) const {
     std::vector<PriceLevel> out;
     for (const auto& [price, level] : asks_) {
         PriceLevel pl{price, 0, 0};
@@ -192,12 +176,12 @@ std::vector<PriceLevel> OrderBook::asks(size_t maxLevels) const {
     return out;
 }
 
-std::optional<int64_t> OrderBook::bestBid() const {
+std::optional<int64_t> MapOrderBook::bestBid() const {
     if (bids_.empty()) return std::nullopt;
     return bids_.begin()->first;
 }
 
-std::optional<int64_t> OrderBook::bestAsk() const {
+std::optional<int64_t> MapOrderBook::bestAsk() const {
     if (asks_.empty()) return std::nullopt;
     return asks_.begin()->first;
 }

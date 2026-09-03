@@ -1,3 +1,4 @@
+#include "../app/statemachine/MapOrderBook.h"
 #include "../app/statemachine/LOBStateMachine.h"
 #include "../app/protocol/OrderProtocol.h"
 
@@ -49,7 +50,7 @@ void testEncodeDecodeModify() {
 }
 
 void testFsmNewNoMatch() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
 
     auto cmd = encodeNew(1, Side::Buy, 10000, 10);
     auto result = fsm.apply(cmd);
@@ -67,7 +68,7 @@ void testFsmNewNoMatch() {
 }
 
 void testFsmNewWithMatch() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
 
     // Resting ask: 5 @10000.
     fsm.apply(encodeNew(1, Side::Sell, 10000, 5));
@@ -90,7 +91,7 @@ void testFsmNewWithMatch() {
 }
 
 void testFsmNewFullFill() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
 
     fsm.apply(encodeNew(1, Side::Sell, 10000, 10));
     auto result = fsm.apply(encodeNew(2, Side::Buy, 10000, 10));
@@ -107,7 +108,7 @@ void testFsmNewFullFill() {
 }
 
 void testFsmCancel() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
     fsm.apply(encodeNew(1, Side::Buy, 10000, 10));
     assert(fsm.orderCount() == 1);
 
@@ -125,7 +126,7 @@ void testFsmCancel() {
 }
 
 void testFsmModify() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
     fsm.apply(encodeNew(1, Side::Sell, 10000, 10));
     fsm.apply(encodeNew(2, Side::Sell, 10000, 10));
 
@@ -148,7 +149,7 @@ void testFsmModify() {
 }
 
 void testFsmRejectDuplicate() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
     fsm.apply(encodeNew(1, Side::Buy, 10000, 10));
 
     auto result = fsm.apply(encodeNew(1, Side::Buy, 10000, 5));
@@ -160,7 +161,7 @@ void testFsmRejectDuplicate() {
 }
 
 void testFsmSnapshotRestore() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
     fsm.apply(encodeNew(1, Side::Buy,  10000, 10));
     fsm.apply(encodeNew(2, Side::Buy,  10000, 5));   // FIFO: 1 then 2
     fsm.apply(encodeNew(3, Side::Sell, 10100, 8));
@@ -168,7 +169,7 @@ void testFsmSnapshotRestore() {
     auto snap = fsm.snapshot();
     assert(!snap.empty());
 
-    LOBStateMachine restored("TEMP");
+    LOBStateMachine restored(std::make_unique<MapOrderBook>("TEMP"));
     restored.restore(snap);
 
     assert(restored.symbol() == "AAPL");
@@ -195,8 +196,8 @@ void testFsmSnapshotRestore() {
 
 void testFsmDeterministicAcrossInstances() {
     // Two independent FSMs fed the same commands must end up in the same state.
-    LOBStateMachine a("AAPL");
-    LOBStateMachine b("AAPL");
+    LOBStateMachine a(std::make_unique<MapOrderBook>("AAPL"));
+    LOBStateMachine b(std::make_unique<MapOrderBook>("AAPL"));
 
     std::vector<std::vector<uint8_t>> cmds = {
         encodeNew(1,  Side::Buy,  9900, 10),
@@ -225,7 +226,7 @@ void testFsmDeterministicAcrossInstances() {
 }
 
 void testFsmL2Queries() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
     fsm.apply(encodeNew(1, Side::Buy,  10000, 5));
     fsm.apply(encodeNew(2, Side::Buy,  10000, 5));
     fsm.apply(encodeNew(3, Side::Buy,  9900, 3));
@@ -266,7 +267,7 @@ void testNewResultRoundTrip() {
 }
 
 void testEmptyAndMalformed() {
-    LOBStateMachine fsm("AAPL");
+    LOBStateMachine fsm(std::make_unique<MapOrderBook>("AAPL"));
 
     // Empty command.
     auto r = fsm.apply({});

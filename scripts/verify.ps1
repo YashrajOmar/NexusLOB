@@ -20,7 +20,7 @@ function P($text) { $script:lines += $text }
 
 P ""
 P "$CYAN$bar$RESET"
-P "$CYAN  $BOLD`NexusLOB - Phase 2 Verification$RESET"
+P "$CYAN  $BOLD`NexusLOB - Phase 3 Verification$RESET"
 P "$CYAN$bar$RESET"
 P ""
 
@@ -137,8 +137,8 @@ $newFiles = git ls-files --others --exclude-standard | Where-Object { $_ -match 
 $modFiles = git diff --name-only HEAD | Where-Object { $_ -match '\.(cpp|h|txt)$' -and $_ -notmatch 'docs/' }
 $new = $newFiles.Count
 $mod = $modFiles.Count
-P "$WHITE  Phase 2 new code files:      $new$RESET"
-P "$WHITE  Phase 2 modified code files: $mod$RESET"
+P "$WHITE  New code files:      $new$RESET"
+P "$WHITE  Modified code files: $mod$RESET"
 P ""
 
 # ================================================================
@@ -150,7 +150,7 @@ if ($passed -eq $total) {
 } else {
     P "$RED  Some checks failed$RESET"
 }
-P "$CYAN  NexusLOB | Phase 2 Verification | C++17 | CMake | 13 tests$RESET"
+P "$CYAN  NexusLOB | Phase 3 Verification | C++17 | CMake | 13 tests$RESET"
 P "$CYAN$bar$RESET"
 P ""
 
@@ -159,10 +159,10 @@ foreach ($l in $script:lines) { Write-Host $l }
 # Save for freeze
 $tempFile = [System.IO.Path]::GetTempFileName()
 $script:lines | Out-File -FilePath $tempFile -Encoding UTF8
-$svgPath = "$root\docs\phase2_verify.svg"
+$svgPath = "$root\docs\phase3_verify.svg"
 $freezePath = (Get-Command freeze -ErrorAction SilentlyContinue)
 if ($freezePath) {
     & freeze $tempFile --language ansi --window --padding 20,40 -o $svgPath 2>&1 | Out-Null
-    Write-Host "$GRAY  SVG saved: docs/phase2_verify.svg$RESET"
+    Write-Host "$GRAY  SVG saved: docs/phase3_verify.svg$RESET"
 }
 Remove-Item $tempFile -ErrorAction SilentlyContinue

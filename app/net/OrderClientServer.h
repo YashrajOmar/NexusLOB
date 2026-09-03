@@ -1,6 +1,6 @@
 #pragma once
 
-#include "statemachine/OrderBook.h"
+#include "statemachine/IOrderBook.h"
 #include "protocol/CommandCodec.h"
 
 #include <functional>

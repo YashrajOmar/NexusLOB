@@ -59,7 +59,8 @@ add_executable(raftkvstore
     app/storage/WriteAheadLog.cpp
     app/storage/SnapshotFile.cpp
     app/statemachine/KVStateMachine.cpp
-    app/statemachine/OrderBook.cpp
+    app/statemachine/MapOrderBook.cpp
+    app/statemachine/SkipListOrderBook.cpp
     app/statemachine/LOBStateMachine.cpp
     app/net/RaftTransport.cpp
     app/net/ClientServer.cpp
@@ -140,7 +141,8 @@ add_test(NAME kv_apply COMMAND test_kv_apply)
 # test_lob_apply: LOB matching engine correctness + latency baseline
 add_executable(test_lob_apply
     tests/test_lob_apply.cpp
-    app/statemachine/OrderBook.cpp
+    app/statemachine/MapOrderBook.cpp
+    app/statemachine/SkipListOrderBook.cpp
 )
 target_include_directories(test_lob_apply PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/app
@@ -150,7 +152,8 @@ add_test(NAME lob_apply COMMAND test_lob_apply)
 # test_order_protocol: LOBStateMachine + binary order protocol
 add_executable(test_order_protocol
     tests/test_order_protocol.cpp
-    app/statemachine/OrderBook.cpp
+    app/statemachine/MapOrderBook.cpp
+    app/statemachine/SkipListOrderBook.cpp
     app/statemachine/LOBStateMachine.cpp
     app/protocol/OrderProtocol.cpp
 )
@@ -246,7 +249,8 @@ add_test(NAME benchmark COMMAND test_benchmark)
 add_executable(test_order_replication
     tests/test_order_replication.cpp
     tests/ClusterHarness.cpp
-    app/statemachine/OrderBook.cpp
+    app/statemachine/MapOrderBook.cpp
+    app/statemachine/SkipListOrderBook.cpp
     app/statemachine/LOBStateMachine.cpp
     app/protocol/OrderProtocol.cpp
 )
@@ -262,7 +266,8 @@ add_test(NAME order_replication COMMAND test_order_replication)
 add_executable(test_lob_benchmark
     tests/test_lob_benchmark.cpp
     tests/ClusterHarness.cpp
-    app/statemachine/OrderBook.cpp
+    app/statemachine/MapOrderBook.cpp
+    app/statemachine/SkipListOrderBook.cpp
     app/statemachine/LOBStateMachine.cpp
     app/protocol/OrderProtocol.cpp
 )

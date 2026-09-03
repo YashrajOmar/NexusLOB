@@ -1,4 +1,5 @@
-#include "../app/statemachine/OrderBook.h"
+#include "../app/statemachine/MapOrderBook.h"
+#include "../app/statemachine/SkipListOrderBook.h"
 
 #include <iostream>
 #include <cassert>
@@ -17,7 +18,7 @@ int64_t totalFillQty(const std::vector<Fill>& fills) {
 }
 
 void testEmptyBook() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
     assert(!book.bestBid().has_value());
     assert(!book.bestAsk().has_value());
     assert(book.orderCount() == 0);
@@ -28,7 +29,7 @@ void testEmptyBook() {
 }
 
 void testNoCrossRestsOnBook() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Buy at 100, no asks to cross → rests on bid side.
     auto fills = book.newOrder(1, Side::Buy, 100, 10, 1);
@@ -47,7 +48,7 @@ void testNoCrossRestsOnBook() {
 }
 
 void testBasicMatch() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Resting sell at 100, qty 10.
     book.newOrder(1, Side::Sell, 100, 10, 1);
@@ -74,7 +75,7 @@ void testBasicMatch() {
 }
 
 void testPartialFillRests() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Sell at 100, qty 5.
     book.newOrder(1, Side::Sell, 100, 5, 1);
@@ -96,7 +97,7 @@ void testPartialFillRests() {
 }
 
 void testPriceTimePriority() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Two sells at 100, seq 1 then seq 2. FIFO: seq 1 matched first.
     book.newOrder(1, Side::Sell, 100, 10, 1);
@@ -120,7 +121,7 @@ void testPriceTimePriority() {
 }
 
 void testPricePriority() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Sells at 101 and 100. Better-priced (100) matched first.
     book.newOrder(1, Side::Sell, 101, 10, 1);
@@ -144,7 +145,7 @@ void testPricePriority() {
 }
 
 void testSweepMultipleLevels() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Three ask levels: 100, 101, 102.
     book.newOrder(1, Side::Sell, 100, 5, 1);
@@ -163,7 +164,7 @@ void testSweepMultipleLevels() {
 }
 
 void testSellSideMatching() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
 
     // Resting bids at 99 (10) and 98 (10).
     book.newOrder(1, Side::Buy, 99, 10, 1);
@@ -185,7 +186,7 @@ void testSellSideMatching() {
 }
 
 void testCancelOrder() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
     book.newOrder(1, Side::Buy, 100, 10, 1);
     book.newOrder(2, Side::Buy, 99, 10, 2);
     assert(book.orderCount() == 2);
@@ -201,7 +202,7 @@ void testCancelOrder() {
 }
 
 void testModifyOrder() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
     book.newOrder(1, Side::Sell, 100, 10, 1);
     book.newOrder(2, Side::Sell, 100, 10, 2);
 
@@ -220,7 +221,7 @@ void testModifyOrder() {
 }
 
 void testL2Depth() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
     // Bids: 100×(5+5), 99×3
     book.newOrder(1, Side::Buy, 100, 5, 1);
     book.newOrder(2, Side::Buy, 100, 5, 2);
@@ -246,7 +247,7 @@ void testL2Depth() {
 }
 
 void testDuplicateIdRejected() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
     auto fills = book.newOrder(1, Side::Buy, 100, 10, 1);
     assert(fills.empty());
     // Same id → rejected, returns empty, no second order.
@@ -257,7 +258,7 @@ void testDuplicateIdRejected() {
 }
 
 void testZeroQuantityRejected() {
-    OrderBook book("AAPL");
+    MapOrderBook book("AAPL");
     auto fills = book.newOrder(1, Side::Buy, 100, 0, 1);
     assert(fills.empty());
     assert(book.orderCount() == 0);
@@ -266,7 +267,7 @@ void testZeroQuantityRejected() {
 
 void testLatencyBaseline() {
     // "Measure first": time in-memory apply() equivalent (newOrder).
-    OrderBook book("BENCH");
+    MapOrderBook book("BENCH");
     // Pre-populate a deep book.
     for (uint64_t i = 1; i <= 1000; ++i)
         book.newOrder(i, Side::Sell, static_cast<int64_t>(10000 + i), 100, i);
@@ -297,6 +298,110 @@ void testLatencyBaseline() {
 
 } // namespace
 
+void testSkipListBasicMatch() {
+    SkipListOrderBook book("AAPL");
+    book.newOrder(1, Side::Sell, 100, 10, 1);
+    auto fills = book.newOrder(2, Side::Buy, 100, 4, 2);
+    assert(fills.size() == 1);
+    assert(fills[0].makerOrderId == 1);
+    assert(fills[0].quantity == 4);
+    assert(book.bestAsk().value() == 100);
+    const Order* maker = book.getOrder(1);
+    assert(maker != nullptr);
+    assert(maker->quantity == 6);
+    std::cout << "skip list basic match: bought 4 @100, maker has 6 left\n";
+}
+
+void testSkipListPriceTimePriority() {
+    SkipListOrderBook book("AAPL");
+    book.newOrder(1, Side::Sell, 100, 10, 1);
+    book.newOrder(2, Side::Sell, 100, 10, 2);
+    auto fills = book.newOrder(3, Side::Buy, 100, 15, 3);
+    assert(fills.size() == 2);
+    assert(fills[0].makerOrderId == 1);
+    assert(fills[0].quantity == 10);
+    assert(fills[1].makerOrderId == 2);
+    assert(fills[1].quantity == 5);
+    std::cout << "skip list price-time: FIFO at 100 -> order1(10) then order2(5/10 left)\n";
+}
+
+void testSkipListSweep() {
+    SkipListOrderBook book("AAPL");
+    book.newOrder(1, Side::Sell, 100, 5, 1);
+    book.newOrder(2, Side::Sell, 101, 5, 2);
+    book.newOrder(3, Side::Sell, 102, 5, 3);
+    auto fills = book.newOrder(4, Side::Buy, INT64_MAX, 8, 4);
+    assert(fills.size() == 2);
+    assert(fills[0].price == 100 && fills[0].quantity == 5);
+    assert(fills[1].price == 101 && fills[1].quantity == 3);
+    assert(book.bestAsk().value() == 101);
+    std::cout << "skip list sweep: market buy 8 -> 5@100 + 3@101\n";
+}
+
+void testSkipListCancelModify() {
+    SkipListOrderBook book("AAPL");
+    book.newOrder(1, Side::Buy, 100, 10, 1);
+    book.newOrder(2, Side::Buy, 99, 10, 2);
+    assert(book.cancelOrder(1));
+    assert(book.bestBid().value() == 99);
+    assert(book.modifyOrder(2, 98, 10, 3));
+    assert(book.bestBid().value() == 98);
+    std::cout << "skip list cancel+modify: works\n";
+}
+
+void testMapVsSkipListIdentical() {
+    MapOrderBook mapBook("AAPL");
+    SkipListOrderBook skipBook("AAPL");
+
+    std::vector<std::tuple<uint64_t, Side, int64_t, int64_t>> orders = {
+        {1, Side::Buy,  9900, 10},
+        {2, Side::Buy,  10000, 5},
+        {3, Side::Sell, 10100, 8},
+        {4, Side::Buy,  10000, 3},
+        {5, Side::Sell, 10000, 6},
+    };
+
+    for (uint64_t i = 0; i < orders.size(); ++i) {
+        auto [id, side, price, qty] = orders[i];
+        auto mf = mapBook.newOrder(id, side, price, qty, i + 1);
+        auto sf = skipBook.newOrder(id, side, price, qty, i + 1);
+        assert(mf.size() == sf.size());
+        for (size_t j = 0; j < mf.size(); ++j) {
+            assert(mf[j].makerOrderId == sf[j].makerOrderId);
+            assert(mf[j].price == sf[j].price);
+            assert(mf[j].quantity == sf[j].quantity);
+        }
+    }
+
+    assert(mapBook.bestBid() == skipBook.bestBid());
+    assert(mapBook.bestAsk() == skipBook.bestAsk());
+    assert(mapBook.orderCount() == skipBook.orderCount());
+    assert(mapBook.bids() == skipBook.bids());
+    assert(mapBook.asks() == skipBook.asks());
+    std::cout << "map vs skip list: identical results\n";
+}
+
+void testSkipListLatency() {
+    SkipListOrderBook book("BENCH");
+    for (uint64_t i = 1; i <= 1000; ++i)
+        book.newOrder(i, Side::Sell, static_cast<int64_t>(10000 + i), 100, i);
+    for (uint64_t i = 1001; i <= 2000; ++i)
+        book.newOrder(i, Side::Buy, static_cast<int64_t>(10000 - (i - 1000)), 100, i);
+
+    constexpr int N = 100000;
+    std::chrono::nanoseconds total{0};
+    for (int i = 0; i < N; ++i) {
+        uint64_t id = 100000 + i;
+        auto t0 = std::chrono::high_resolution_clock::now();
+        book.newOrder(id, (i % 2 == 0) ? Side::Buy : Side::Sell, 10050, 1, id);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        total += t1 - t0;
+    }
+    double avgNs = static_cast<double>(total.count()) / N;
+    std::cout << "skip list latency (newOrder, " << N << " ops): avg=" << avgNs << " ns\n";
+    assert(avgNs > 0);
+}
+
 int main() {
     std::cout << "=== test_lob_apply ===\n";
     testEmptyBook();
@@ -313,6 +418,13 @@ int main() {
     testDuplicateIdRejected();
     testZeroQuantityRejected();
     testLatencyBaseline();
+    std::cout << "\n--- Skip List Tests ---\n";
+    testSkipListBasicMatch();
+    testSkipListPriceTimePriority();
+    testSkipListSweep();
+    testSkipListCancelModify();
+    testMapVsSkipListIdentical();
+    testSkipListLatency();
     std::cout << "test_lob_apply: PASS\n";
     return 0;
 }

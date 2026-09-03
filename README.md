@@ -62,7 +62,7 @@ Limit order book matching engine connected to the Raft consensus engine. Orders 
 ### What's built
 
 - **OrderBook** — L3 price-time priority matching engine (FIFO at each price level), L3 internal book with L2 depth view, cancel-replace semantics, multi-level sweeps. Fixed-point prices for deterministic matching across replicas.
-- **LOBStateMachine** — implements the `StateMachine` interface, wraps `OrderBook`, decodes binary order commands in `apply()`, serializes book in `snapshot()`/`restore()`. Deterministic sequence counter (same on all replicas).
+- **LOBStateMachine** — implements the `StateMachine` interface, wraps `IOrderBook`, decodes binary order commands in `apply()`, serializes book in `snapshot()`/`restore()`. Deterministic sequence counter (same on all replicas).
 - **Binary wire protocol** — length-prefixed frames (`[len:4][opcode:1][payload]`) for NEW/CXL/MOD/BOOK. Replaces text protocol.
 - **Three read modes** — Direct (fast, local), LeaseBased (leader lease), ReadIndex (quorum confirmation, linearizable). Selectable via `--readmode` flag.
 - **Dependency injection** — Server has zero mode checks. FSM + codec + book reader all injected at construction. Adding a new FSM type doesn't change Server.
@@ -100,6 +100,45 @@ All benchmarks run in-process (no network, no disk) on a local dev machine. Prod
 
 ---
 
+## Phase 3 — Skip List Matching Engine
+
+Pluggable matching engine via dependency injection. A custom skip list (`SkipList<K,V,Compare>`) replaces `std::map` as the price-level data structure — same O(log n) average complexity, better cache locality, and simpler lock-free potential.
+
+### What's built
+
+- **`SkipList<K,V,Compare>`** — generic, reusable skip list template. `shared_ptr<Node>` (smart pointers), tunable `maxLevel` (from `ceil(log2(maxN))`) and `probability` (default 0.5), `mt19937` + `uniform_real_distribution` for coin flips.
+- **`SkipListOrderBook`** — implements `IOrderBook`, uses two skip lists: bids (descending via `std::greater`), asks (ascending via `std::less`). Each price level holds a `std::list<Order>` for FIFO matching.
+- **`IOrderBook`** — abstract interface (the DI seam). `MapOrderBook` and `SkipListOrderBook` both implement it.
+- **`MapOrderBook`** — renamed from `OrderBook`, implements `IOrderBook` (Phase 2 engine, unchanged).
+- **`LOBStateMachine` refactored** — now takes `std::unique_ptr<IOrderBook>` via constructor. Doesn't know whether it's running map or skip list. Zero changes to Server, codec, or protocol.
+- **`--mode skiplob`** — selects the skip list engine at startup (vs `--mode lob` for map).
+
+### Verification
+
+![Phase 3 Demo](docs/phase3_demo.svg)
+![Phase 3 Verification](docs/phase3_verify.svg)
+
+```
+Matching Engine Comparison (in-memory, 2000-order book, 100k ops)
+  std::map matching:       0.45 us
+  Skip list matching:      0.55 us
+  Determinism:             Verified (identical results: map=skiplist, all 3 replicas)
+```
+
+The skip list is slightly slower at this scale (2000 orders) due to `shared_ptr` atomic ref-counting. Skip lists win at larger scale and with concurrent access. The key result: **both engines produce identical output** — verified by `testMapVsSkipListIdentical`.
+
+### Three modes (selectable at startup)
+
+| Mode | FSM | Matching Engine | Flag |
+|------|-----|-----------------|------|
+| KV | `KVStateMachine` | N/A (key-value map) | `--mode kv` |
+| LOB | `LOBStateMachine` | `MapOrderBook` (std::map) | `--mode lob` |
+| SkipLOB | `LOBStateMachine` | `SkipListOrderBook` (skip list) | `--mode skiplob` |
+
+All three use the same Server, same `CommandCodec`, same `OrderClientServer`, same raft engine. Only the injected `IOrderBook` differs between LOB and SkipLOB.
+
+---
+
 ## Architecture
 
 ```
@@ -113,23 +152,26 @@ raft/                          Pure algorithm — no disk, no sockets
 app/                          Application — wires raft to real I/O
   storage/                    WriteAheadLog (disk + fsync), SnapshotFile
   statemachine/               KVStateMachine (Phase 1 FSM)
-                              OrderBook (L3 matching engine, pure data structure)
-                              LOBStateMachine (Phase 2 FSM, implements BookReader)
+                              IOrderBook (abstract matching engine interface)
+                              MapOrderBook (std::map engine, Phase 2)
+                              SkipListOrderBook (skip list engine, Phase 3)
+                              SkipList<K,V,Compare> (generic skip list template)
+                              LOBStateMachine (Phase 2+3 FSM, implements BookReader)
   protocol/                   Protocol (KV binary), OrderProtocol (LOB binary)
                               CommandCodec (DI interface), KVCodec, LOBCodec
   net/                        RaftTransport (TCP), ClientServer (text),
                               OrderClientServer (binary order protocol)
   server/                     Server (Ready loop, DI, 3 read modes), ReadMode
-  Config.h/.cpp, main.cpp     Cluster config + entry point (--mode lob)
+  Config.h/.cpp, main.cpp     Cluster config + entry point (--mode kv|lob|skiplob)
 
 tests/                        ClusterHarness + 13 test files
 scripts/                      Demo + crash test scripts
-docs/                         Demo SVGs (Phase 1 + Phase 2)
+docs/                         Demo SVGs (Phase 1 + 2 + 3)
 ```
 
 **The key invariant:** `raft/` contains zero `#include` directives for files, sockets, or any I/O library. The algorithm never touches the outside world — it outputs a `Ready` struct describing what needs persisting/sending/applying, and the application layer does the actual I/O. Verified by grep.
 
-**Dependency injection:** Server receives its FSM, codec, and book reader via constructor injection — zero mode checks. Adding a new FSM type means writing new classes and injecting them; Server never changes.
+**Dependency injection:** Two levels of DI. Server receives its FSM, codec, and book reader via constructor injection — zero mode checks. LOBStateMachine receives its `IOrderBook` (MapOrderBook or SkipListOrderBook) via constructor injection — zero engine checks. Adding a new matching engine or FSM type means writing new classes and injecting them; Server and FSM never change.
 
 ---
 
@@ -138,12 +180,13 @@ docs/                         Demo SVGs (Phase 1 + Phase 2)
 | Algorithm | Where | Purpose |
 |---|---|---|
 | Raft Consensus | `raft/` | Replicate order book across 3 fault-tolerant nodes |
-| Price-Time Priority (FIFO) | `OrderBook.cpp` | Match orders: best price first, first-arrived first within price |
+| Price-Time Priority (FIFO) | `MapOrderBook.cpp`, `SkipListOrderBook.cpp` | Match orders: best price first, first-arrived first within price |
+| Skip List | `SkipList.h` | Probabilistic O(log n) ordered map (alternative to std::map) |
 | ReadIndex (Raft §6.4) | `ReadOnly.h`, `Server.cpp` | Linearizable reads without full consensus round |
 | Lease-Based Reads | `Server.cpp` | Fast reads via leader lease (no quorum check) |
-| Cancel-Replace | `OrderBook.cpp` | Modify = cancel + re-add (loses time priority) |
-| Fixed-Point Arithmetic | `OrderBook.h` | Deterministic matching across replicas (no float rounding) |
-| Dependency Injection | `Server.h`, `CommandCodec.h` | Extensible architecture (open/closed principle) |
+| Cancel-Replace | `MapOrderBook.cpp`, `SkipListOrderBook.cpp` | Modify = cancel + re-add (loses time priority) |
+| Fixed-Point Arithmetic | `IOrderBook.h` | Deterministic matching across replicas (no float rounding) |
+| Dependency Injection | `Server.h`, `CommandCodec.h`, `IOrderBook.h` | Two-level DI: pluggable FSMs + pluggable matching engines |
 
 ---
 
@@ -161,6 +204,9 @@ cmake -B build && cmake --build build -j$(nproc)
 
 # LOB mode (Phase 2) with binary protocol + ReadIndex
 ./build/raftkvstore 1 ./data/n1 127.0.0.1:9991:8001 127.0.0.1:9992:8002 127.0.0.1:9993:8003 --mode lob --readmode readindex --orderport 9001
+
+# Skip list mode (Phase 3) — same but with skip list matching engine
+./build/raftkvstore 1 ./data/n1 127.0.0.1:9991:8001 127.0.0.1:9992:8002 127.0.0.1:9993:8003 --mode skiplob --readmode readindex --orderport 9001
 ```
 
 ## Tests
@@ -174,14 +220,14 @@ ctest --test-dir build --output-on-failure
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\phase1_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\phase2_demo.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\phase3_demo.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1
 ```
 
 ---
 
-## Phase 3 (Next)
+## Phase 4 (Next)
 
-- **Skip list matching engine** — replace `std::map` with a lock-free skip list for O(log n) concurrent matching
 - **Group commit** — batch fsync across multiple entries (10x latency win)
 - **Pipelined AppendEntries** — don't wait for ack before sending the next batch
 - **Membership changes** — `ConfChange` types are defined, the protocol isn't implemented

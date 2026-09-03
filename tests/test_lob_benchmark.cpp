@@ -1,4 +1,5 @@
 #include "ClusterHarness.h"
+#include "../app/statemachine/MapOrderBook.h"
 #include "../app/statemachine/LOBStateMachine.h"
 #include "../app/protocol/OrderProtocol.h"
 
@@ -23,7 +24,8 @@ int main() {
     std::map<NodeId, std::unique_ptr<LOBStateMachine>> fsms;
     std::map<NodeId, size_t> applyCount;
     for (auto id : peers) {
-        fsms[id] = std::make_unique<LOBStateMachine>("LOB");
+        fsms[id] = std::make_unique<LOBStateMachine>(
+            std::make_unique<MapOrderBook>("LOB"));
         applyCount[id] = 0;
     }
     harness.setApplyCallback([&](NodeId id, const std::vector<Entry>& entries) {

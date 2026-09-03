@@ -1,4 +1,5 @@
 #include "statemachine/LOBStateMachine.h"
+#include "statemachine/MapOrderBook.h"
 #include "protocol/OrderProtocol.h"
 
 #include <cstring>
@@ -33,11 +34,11 @@ bool getU32raw(const std::vector<uint8_t>& buf, size_t& off, uint32_t& out) {
 } // namespace
 
 // ============================================================
-// Construction
+// Construction: inject the order book implementation
 // ============================================================
 
-LOBStateMachine::LOBStateMachine(std::string symbol)
-    : book_(std::move(symbol)) {}
+LOBStateMachine::LOBStateMachine(std::unique_ptr<IOrderBook> book)
+    : book_(book ? std::move(book) : std::make_unique<MapOrderBook>("LOB")) {}
 
 // ============================================================
 // StateMachine interface
@@ -59,14 +60,11 @@ std::vector<uint8_t> LOBStateMachine::apply(const std::vector<uint8_t>& data) {
             if (!order_protocol::decodeNew(data, orderId, side, price, quantity)) {
                 return order_protocol::encodeSimpleResult(false);
             }
-            // Reject duplicate orderId or non-positive quantity before
-            // calling newOrder (which can't distinguish reject from no-match).
-            if (quantity <= 0 || book_.getOrder(orderId) != nullptr) {
+            if (quantity <= 0 || book_->getOrder(orderId) != nullptr) {
                 return order_protocol::encodeSimpleResult(false);
             }
-            auto fills = book_.newOrder(orderId, side, price, quantity, seq);
+            auto fills = book_->newOrder(orderId, side, price, quantity, seq);
 
-            // Compute remaining (resting) quantity.
             int64_t filled = 0;
             for (const auto& f : fills) filled += f.quantity;
             int64_t remaining = quantity - filled;
@@ -79,7 +77,7 @@ std::vector<uint8_t> LOBStateMachine::apply(const std::vector<uint8_t>& data) {
             if (!order_protocol::decodeCancel(data, orderId)) {
                 return order_protocol::encodeSimpleResult(false);
             }
-            bool ok = book_.cancelOrder(orderId);
+            bool ok = book_->cancelOrder(orderId);
             return order_protocol::encodeSimpleResult(ok);
         }
         case order_protocol::OP_MOD: {
@@ -88,7 +86,7 @@ std::vector<uint8_t> LOBStateMachine::apply(const std::vector<uint8_t>& data) {
             if (!order_protocol::decodeModify(data, orderId, newPrice, newQuantity)) {
                 return order_protocol::encodeSimpleResult(false);
             }
-            bool ok = book_.modifyOrder(orderId, newPrice, newQuantity, seq);
+            bool ok = book_->modifyOrder(orderId, newPrice, newQuantity, seq);
             return order_protocol::encodeSimpleResult(ok);
         }
         default:
@@ -98,16 +96,6 @@ std::vector<uint8_t> LOBStateMachine::apply(const std::vector<uint8_t>& data) {
 
 // ============================================================
 // Snapshot / restore
-//
-// Format:
-//   [nextSeq:8]
-//   [symbolLen:4][symbol bytes]
-//   [orderCount:4]
-//   ([orderId:8][side:1][price:8][quantity:8][sequence:8])*
-//
-// Orders are serialized level-by-level (bids then asks), in FIFO order
-// within each level. Restore re-adds them in the same order so the
-// list position (time priority) is preserved exactly.
 // ============================================================
 
 std::vector<uint8_t> LOBStateMachine::snapshot() const {
@@ -116,11 +104,11 @@ std::vector<uint8_t> LOBStateMachine::snapshot() const {
     std::vector<uint8_t> buf;
     putU64raw(buf, nextSeq_);
 
-    const auto& sym = book_.symbol();
+    const auto& sym = book_->symbol();
     putU32raw(buf, static_cast<uint32_t>(sym.size()));
     buf.insert(buf.end(), sym.begin(), sym.end());
 
-    auto orders = book_.allOrders();
+    auto orders = book_->allOrders();
     putU32raw(buf, static_cast<uint32_t>(orders.size()));
 
     for (const auto& o : orders) {
@@ -148,8 +136,8 @@ void LOBStateMachine::restore(const std::vector<uint8_t>& data) {
     uint32_t orderCount;
     if (!getU32raw(data, off, orderCount)) return;
 
-    // Reset the book with the correct symbol, then re-add all orders.
-    book_ = OrderBook(sym);
+    // Reset the injected book with the correct symbol.
+    book_->reset(sym);
 
     for (uint32_t i = 0; i < orderCount; ++i) {
         uint64_t orderId;
@@ -171,7 +159,7 @@ void LOBStateMachine::restore(const std::vector<uint8_t>& data) {
         o.price    = static_cast<int64_t>(priceU);
         o.quantity = static_cast<int64_t>(qtyU);
         o.sequence = seqU;
-        book_.addRestingOrder(o);
+        book_->addRestingOrder(o);
     }
 }
 
@@ -181,31 +169,31 @@ void LOBStateMachine::restore(const std::vector<uint8_t>& data) {
 
 std::vector<PriceLevel> LOBStateMachine::bids(size_t maxLevels) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return book_.bids(maxLevels);
+    return book_->bids(maxLevels);
 }
 
 std::vector<PriceLevel> LOBStateMachine::asks(size_t maxLevels) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return book_.asks(maxLevels);
+    return book_->asks(maxLevels);
 }
 
 std::optional<int64_t> LOBStateMachine::bestBid() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return book_.bestBid();
+    return book_->bestBid();
 }
 
 std::optional<int64_t> LOBStateMachine::bestAsk() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return book_.bestAsk();
+    return book_->bestAsk();
 }
 
 size_t LOBStateMachine::orderCount() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return book_.orderCount();
+    return book_->orderCount();
 }
 
 const std::string& LOBStateMachine::symbol() const {
-    return book_.symbol();
+    return book_->symbol();
 }
 
 } // namespace app

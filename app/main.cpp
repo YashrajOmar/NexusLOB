@@ -2,6 +2,8 @@
 #include "server/ReadMode.h"
 #include "statemachine/KVStateMachine.h"
 #include "statemachine/LOBStateMachine.h"
+#include "statemachine/MapOrderBook.h"
+#include "statemachine/SkipListOrderBook.h"
 #include "protocol/KVCodec.h"
 #include "protocol/LOBCodec.h"
 #include "net/OrderClientServer.h"
@@ -25,7 +27,7 @@ int main(int argc, char** argv) {
     if (argc < 4) {
         std::cerr << "Usage: " << argv[0]
                   << " <id> <dataDir> <peer1Host:raftPort:clientPort> [peer2...] "
-                     "[--mode kv|lob] [--readmode direct|readindex|lease] "
+                     "[--mode kv|lob|skiplob] [--readmode direct|readindex|lease] "
                      "[--orderport N]\n"
                   << "Example: " << argv[0]
                   << " 1 ./data/n1 127.0.0.1:9999:8000 127.0.0.1:9998:8001 127.0.0.1:9997:8002 --mode lob --readmode readindex --orderport 9000\n";
@@ -90,16 +92,24 @@ int main(int argc, char** argv) {
     app::BookReader* bookReader = nullptr;
     std::unique_ptr<app::OrderClientServer> orderServer;
 
-    if (modeStr == "lob") {
-        auto lob = std::make_unique<app::LOBStateMachine>("LOB");
+    if (modeStr == "lob" || modeStr == "skiplob") {
+        std::unique_ptr<app::IOrderBook> book;
+        if (modeStr == "skiplob") {
+            book = std::make_unique<app::SkipListOrderBook>("LOB");
+            std::cerr << "Using skip list matching engine\n";
+        } else {
+            book = std::make_unique<app::MapOrderBook>("LOB");
+            std::cerr << "Using std::map matching engine\n";
+        }
+        auto lob = std::make_unique<app::LOBStateMachine>(std::move(book));
         bookReader = lob.get();
         fsm = std::move(lob);
         codec = std::make_unique<app::LOBCodec>();
         if (orderPort > 0) {
             orderServer = std::make_unique<app::OrderClientServer>(orderPort);
         }
-        std::cerr << "Starting in LOB mode (readMode=" << static_cast<int>(readMode)
-                  << ", orderPort=" << orderPort << ")\n";
+        std::cerr << "Starting in " << modeStr << " mode (readMode="
+                  << static_cast<int>(readMode) << ", orderPort=" << orderPort << ")\n";
     } else {
         fsm = std::make_unique<app::KVStateMachine>();
         codec = std::make_unique<app::KVCodec>();
