@@ -129,12 +129,13 @@ if (Test-Path "$root\.clang-tidy") {
 P ""
 
 # ================================================================
-# 6. File inventory (counts changes in the last commit)
+# 6. File inventory (counts all changes in recent commits)
 # ================================================================
 P "$CYAN  [6] File inventory$RESET"
 P ""
-$newFiles = git diff --name-only --diff-filter=A HEAD~1 HEAD | Where-Object { $_ -match '\.(cpp|h)$' }
-$modFiles = git diff --name-only --diff-filter=M HEAD~1 HEAD | Where-Object { $_ -match '\.(cpp|h)$' }
+# Count changes across the last 3 commits (Phase 4 work)
+$newFiles = git diff --name-only --diff-filter=A HEAD~3 HEAD | Where-Object { $_ -match '\.(cpp|h)$' }
+$modFiles = git diff --name-only --diff-filter=M HEAD~3 HEAD | Where-Object { $_ -match '\.(cpp|h)$' }
 $new = $newFiles.Count
 $mod = $modFiles.Count
 P "$WHITE  New code files:      $new$RESET"
