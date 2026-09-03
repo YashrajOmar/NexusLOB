@@ -100,13 +100,50 @@ P "$CYAN$bar$RESET"
 P ""
 
 $benchOutput = & .\build\test_phase4_benchmark.exe 2>&1
-foreach ($bl in ($benchOutput -split "`n")) {
+$benchExit = $LASTEXITCODE
+$benchLines = $benchOutput -split "`n"
+
+# Check if benchmark actually succeeded.
+$benchSuccess = $false
+$singleAvg = ""
+$batchAvg = ""
+$singleTps = ""
+$batchTps = ""
+
+foreach ($bl in $benchLines) {
     P $bl
+    if ($bl -match "test_phase4_benchmark: PASS") { $benchSuccess = $true }
+    if ($bl -match "Single propose.*avg=([\d.]+).*throughput=(\d+)") {
+        $singleAvg = $matches[1]; $singleTps = $matches[2]
+    }
+    if ($bl -match "Batch propose.*avg=([\d.]+).*throughput=(\d+)") {
+        $batchAvg = $matches[1]; $batchTps = $matches[2]
+    }
 }
+
 P ""
 
+if (-not $benchSuccess) {
+    P "$RED  BENCHMARK FAILED — no results to report$RESET"
+    P ""
+    P "$CYAN$bar$RESET"
+    P "$CYAN  OPTIMIZATIONS APPLIED$RESET"
+    P "$CYAN$bar$RESET"
+    P ""
+    P "$RED  Benchmark did not complete. Fix before using these numbers.$RESET"
+    P ""
+    P "$CYAN$bar$RESET"
+    P "$CYAN  NexusLOB  Phase 4  14 tests  C++17  CMake$RESET"
+    P "$CYAN  Next: Phase 5 - Sharding (per-symbol Raft groups)$RESET"
+    P "$CYAN  https://github.com/YashrajOmar/NexusLOB$RESET"
+    P "$CYAN$bar$RESET"
+    P ""
+    foreach ($outLine in $script:lines) { Write-Host $outLine }
+    exit 1
+}
+
 # ================================================================
-# OPTIMIZATIONS
+# OPTIMIZATIONS (only printed if benchmark succeeded)
 # ================================================================
 P "$CYAN$bar$RESET"
 P "$CYAN  OPTIMIZATIONS APPLIED$RESET"
@@ -116,7 +153,10 @@ P ""
 P "$WHITE  1. Group Commit (Batch fsync)$RESET"
 P "$GRAY    Before: fsync after every log entry (1 fsync per order)$RESET"
 P "$GRAY    After:  fsync once per batch (1 fsync per N orders)$RESET"
-P "$GRAY    Result: 2.4x throughput improvement (1267 -> 3006 ops/sec)$RESET"
+if ($batchTps -and $singleTps) {
+    $improvement = [math]::Round([double]$batchTps / [double]$singleTps, 1)
+    P "$GREEN    Result: ${improvement}x throughput improvement ($singleTps -> $batchTps ops/sec)$RESET"
+}
 P ""
 
 P "$WHITE  2. Persistent TCP Connections$RESET"

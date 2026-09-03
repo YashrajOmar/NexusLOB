@@ -36,8 +36,10 @@ int main() {
         }
     });
 
-    // Elect a leader.
-    harness.step(25);
+    // Elect a leader — retry until leader is found (race condition fix).
+    for (int attempt = 0; attempt < 10 && harness.leader() == 0; ++attempt) {
+        harness.step(25);
+    }
     assert(harness.leader() != 0);
     NodeId lead = harness.leader();
     std::cout << "Leader: node " << lead << "\n";
